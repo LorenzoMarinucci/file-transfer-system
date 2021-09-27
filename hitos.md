@@ -16,7 +16,7 @@
 
 - Desarrollo de los pares e integración con los trackers y el cliente.
 
-## _30/11/21_
+## _23/11/21_
 
 - Añadidos finales.
 
