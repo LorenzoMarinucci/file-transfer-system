@@ -31,14 +31,14 @@ socketUDP.on('listening', () => {
 
   });
   
-  socket.bind(portTracker); //se pone a escuchar para UDP
+  socketUDP.bind(portTracker); //se pone a escuchar para UDP
 
 //scan
 function scan(){
 
     //deberia pedir por UDP los objetos files de todos los nodos tracker restantes y luego devolverlos
 
-    let message = files;
+    let message = JSON.stringify(files);
     socketUDP.send(message, portServerUDP, 'localhost', (err) => {
         //socketUDP.close(); deberia cerrarse?
     });

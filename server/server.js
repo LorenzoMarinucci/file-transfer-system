@@ -28,6 +28,9 @@ app.listen(portTCP, () => {
 socketUDP.on('listening', () => {
   let addr = socketUDP.address();
   console.log(`Listening for UDP packets at ${addr.address}:${addr.port}`);
+
+  //invoca a scan para probar funcionalidad
+  scan();
 });
 
 socketUDP.on('error', (err) => {
@@ -38,7 +41,7 @@ socketUDP.on('message', (msg, rinfo) => {
   console.log(`(UDP) recibido: ${msg} desde ${rinfo.address}:${rinfo.port}`);
 });
 
-socket.bind(portUDP); //se pone a escuchar para UDP
+socketUDP.bind(portUDP); //se pone a escuchar para UDP
 
 //Scan: solicita un escaneo de archivos del vecino o de toda la red
 function scan(){
@@ -48,3 +51,4 @@ function scan(){
     //socketUDP.close(); deberia hacer un close?
   });
 }
+
