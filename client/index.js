@@ -2,20 +2,17 @@ const URL_FILES = 'http://localhost:8080/files';
 
 const ListResponse = document.querySelector('#files-list');
 
-/*
 fetch(URL_FILES)
     .then((response) => response.json())
-    .then((files) => {
-        const tpl = files.map(file => `<li> ${file.filename} ${file.filesize} ${file.par} </li>`);
+    .then((value) => {
+        let tpl = '';
+        Object.entries(value).map(entry => {
+            let hash = entry[0];
+            let file = entry[1];
+            let filename = file.filename;
+            let filesize = file.filesize;
+            let par = file.par;
+            tpl += `<li> ${hash} ${filename} ${filesize} ${par}</li>`;
+        });
         ListResponse.innerHTML = `<ul>${tpl}</ul>`;
-    })
-*/
-
-fetch(URL_FILES)
-    .then((response) => response.json())
-    .then((file) => {
-        //const tpl = `<li> ${file.filename} ${file.filesize} ${file.par} </li>`;
-        const tpl = file.entries((entry) => `<li> ${entry.filename} ${entry.filesize} ${entry.par}</li>`);
-        ListResponse.innerHTML = `<ul>${tpl}</ul>`;
-
     })

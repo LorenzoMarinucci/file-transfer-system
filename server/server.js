@@ -18,7 +18,7 @@ app.listen(portTCP, () => {
 app.get('/files', function(req, res) {
   scan().then(val => {
     let value = JSON.parse(val.toString('utf-8'));
-    console.log('respuesta desde el tracker =', value)
+    console.log('respuesta desde el tracker =', value);
     res.json(value);
   });
 });

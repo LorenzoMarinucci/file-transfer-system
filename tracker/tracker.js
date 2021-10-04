@@ -7,9 +7,19 @@ const socketUDP = dgram.createSocket('udp4'); //socket para UDP
 var files = {
 
     HASH_1: {
-        filename: "example_file",
-        filesize: 20,
+        filename: "example_file1",
+        filesize: 21,
         par: "par 1"
+    },
+    HASH_2: {
+        filename: "example_file2",
+        filesize: 22,
+        par: "par 2"
+    },
+    HASH_3: {
+        filename: "example_file3",
+        filesize: 23,
+        par: "par 3"
     }
 }
 

@@ -69,6 +69,16 @@ footer {
   background-color: white;
   width: 70%;
   min-height: 75vh;
+  font-size: medium;
+}
+
+#files-list li{
+  box-shadow: 1px 1px 1px 1px lightgray;
+  padding: 2px 2px 2px 2px;
+}
+
+#files-list li:hover{
+  background-color: rgb(194, 172, 214);
 }
 
 #upload-file {
