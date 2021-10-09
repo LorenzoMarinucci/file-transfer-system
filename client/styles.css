@@ -62,27 +62,105 @@ footer {
 }
 
 .logo-img {
-  height: 100px;
+  height: 10vh;
+}
+
+#files {
+  background-color: white;
+  width: 100%;
+  min-height: 75vh;
+  font-size: medium;
+  text-align: center;
+  display: block;
 }
 
 #files-list {
-  background-color: white;
-  width: 70%;
-  min-height: 75vh;
-  font-size: medium;
+  background-color: rgb(202, 158, 228);
+  width: 95%;
+  min-height: 63vh;
+  margin: 0 auto;
 }
 
-#files-list li{
-  box-shadow: 1px 1px 1px 1px lightgray;
-  padding: 2px 2px 2px 2px;
+#files-list li {
+  box-shadow: 1px lightgray;
+  padding: 2px;
 }
 
-#files-list li:hover{
+#files-list li:hover {
   background-color: rgb(194, 172, 214);
 }
 
-#upload-file {
-  background-color: rgb(231, 231, 231);
-  width: 30%;
-  min-height: 75vh;
+#title-list {
+  text-align: center;
+  margin: 10px;
+}
+
+#update-button {
+  margin: 10px;
+}
+
+#upload-title {
+  text-align: center;
+  margin: 10px;
+  font-size: medium;
+}
+
+#file-input::-webkit-file-upload-button {
+  visibility: hidden;
+}
+
+#file-input::before {
+  content: "Seleccione un archivo";
+  display: inline-block;
+  background: linear-gradient(top, #f9f9f9, #e3e3e3);
+  border: 1px solid #999;
+  border-radius: 3px;
+  padding: 5px 8px;
+  outline: none;
+  white-space: nowrap;
+  user-select: all;
+  -webkit-user-select: none;
+  cursor: pointer;
+  text-shadow: 1px 1px #fff;
+  font-weight: 700;
+  font-size: 10pt;
+}
+
+#file-input:hover::before {
+  border-color: black;
+}
+
+#file-input:active::before {
+  background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+}
+
+/*https://css-tricks.com/snippets/css/custom-file-input-styling-webkitblink/*/
+
+.btn {
+  margin: 10px;
+}
+
+#popUpBox {
+  width: 500px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 0 10px black;
+  border-radius: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  padding: 10px;
+  text-align: center;
+  display: none;
+}
+
+/*https://dzone.com/articles/4-ways-to-create-a-modal-popup-box-with-html-css-a*/
+
+#file-details {
+  font-size: medium;
+  color: white;
+  margin: 10px;
+  background-color: black;
 }

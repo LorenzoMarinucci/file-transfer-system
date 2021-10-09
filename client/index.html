@@ -12,7 +12,7 @@
     />
     <link rel="shortcut icon" href="./icons/icon.png" />
     <link rel="stylesheet" href="./styles.css" />
-    <title>Torrente</title>
+    <title>Bit-Torrente</title>
   </head>
   <body>
     <header>
@@ -21,8 +21,32 @@
       </div>
     </header>
     <main>
-      <div id="files-list"></div>
-      <div id="upload-file"></div>
+      <div id="files">
+        <p id="title-list">Archivos disponibles para descargar</p>
+        <div id="update-button">
+          <button>Actualizar lista</button>
+          <button onclick="Alert.render()" class="btn">Cargar archivo</button>
+        </div>
+        <div id="files-list"></div>
+      </div>
+      <div id="popUpOverlay"></div>
+      <div id="popUpBox">
+        <div id="box">
+          <i class="fas fa-check-circle fa-5x"></i>
+          <p id="upload-title">Carga de archivos</p>
+          <input type="file" id="file-input" style="display: none" />
+          <input
+            type="button"
+            value="Elegir archivo..."
+            onclick="document.getElementById('file-input').click();"
+          />
+          <div id="file-details">
+            <p id="file-name">Nombre del archivo:</p>
+            <p id="file-size">Tamaño:</p>
+          </div>
+          <div id="closeModal"></div>
+        </div>
+      </div>
     </main>
     <footer>
       <div id="contact-info">
@@ -35,6 +59,6 @@
         <h6>2021 &COPY</h6>
       </div>
     </footer>
-    <script src='index.js' type='module'></script>
+    <script src="index.js"></script>
   </body>
 </html>
