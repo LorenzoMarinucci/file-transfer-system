@@ -47,6 +47,9 @@ function scan() {
 
   let message = JSON.stringify(files);
   socketUDP.send(message, portServerUDP, "localhost", (err) => {
+    if (err) {
+      console.log(err);
+    }
     //socketUDP.close(); deberia cerrarse?
   });
 }

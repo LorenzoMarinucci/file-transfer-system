@@ -1,20 +1,20 @@
-const middleware = require("../../middleware/middleware");
+const { sendUdpMessage } = require("../../middleware/communication");
 require("dotenv").config();
 const TRACKER_PORT = process.env.TRACKER_PORT;
 const TRACKER_ADDRESS = process.env.TRACKER_ADDRESS;
+const LOCAL_PORT = process.env.TCP_PORT;
 const SCAN_MSG = "/scan";
 
 function getAllFiles() {
   return new Promise((resolve, reject) => {
-    middleware
-      .sendUdpMessage(SCAN_MSG, TRACKER_ADDRESS, TRACKER_PORT, 8081)
+    sendUdpMessage(SCAN_MSG, TRACKER_ADDRESS, TRACKER_PORT, LOCAL_PORT)
       .then((val) => {
+        console.log("Succesful response from tracker.");
         let value = JSON.parse(val.toString("utf-8"));
-        console.log("Tracker response: ", value);
-        resolve(val);
+        resolve(value);
       })
       .catch((error) => {
-        console.error("Error en el llamado: ", error);
+        console.log("Error while requesting files from tracker.");
         reject(error);
       });
   });
