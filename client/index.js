@@ -1,4 +1,4 @@
-const URL_FILES = "http://localhost:8080/files";
+const URL_FILES = "http://localhost:8080/file";
 
 const ListResponse = document.querySelector("#files-list");
 
