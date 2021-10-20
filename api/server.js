@@ -60,9 +60,16 @@ app.post("/file", (req, res) => {
 
 app.get("/file/:hash", (req, res) => {
   const hash = req.params.hash;
+  log.info(`GET Request received at /file/${hash}`);
   filesService
     .requestFile(hash)
-    .then((node) => {})
+    .then((node) => {
+      res.set({
+        "Content-Disposition": `attachment; filename="${hash}.torrente"`,
+      });
+      res.status(200);
+      res.end(node);
+    })
     .catch((err) => {
       log.error("Fail during file request.");
       log.error(err);

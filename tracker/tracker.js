@@ -5,24 +5,30 @@ const socketUDP = dgram.createSocket("udp4"); //socket para UDP
 
 const SCAN_REGEX = /^\/scan$/;
 const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/;
+const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/;
 
-var files = {
-  HASH_1: {
-    filename: "example_file1",
-    filesize: 21,
-    par: "par 1",
-  },
-  HASH_2: {
-    filename: "example_file2",
-    filesize: 22,
-    par: "par 2",
-  },
-  HASH_3: {
-    filename: "example_file3",
-    filesize: 23,
-    par: "par 3",
-  },
-};
+const files = new Map();
+
+files.set("hash1", {
+  filename: "example_file1",
+  filesize: 21,
+  nodePort: 1,
+  nodeIp: "128.0.0.1",
+});
+
+files.set("hash2", {
+  filename: "example_file2",
+  filesize: 21,
+  nodePort: 2,
+  nodeIp: "128.0.0.2",
+});
+
+files.set("hash3", {
+  filename: "example_file3",
+  filesize: 21,
+  nodePort: 1,
+  nodeIp: "128.0.0.3",
+});
 
 socketUDP.on("listening", () => {
   let addr = socketUDP.address();
@@ -37,6 +43,7 @@ socketUDP.on("message", (msg, rinfo) => {
   console.log(`(UDP) recibido: ${msg} desde ${rinfo.address}:${rinfo.port}`);
   let parsedMsg = JSON.parse(msg);
   let route = parsedMsg.route;
+  console.log(FILE_REQUEST_REGEX.test(route));
   switch (true) {
     case SCAN_REGEX.test(route): {
       scan();
@@ -44,6 +51,11 @@ socketUDP.on("message", (msg, rinfo) => {
     }
     case STORE_REGEX.test(route): {
       uploadFile();
+      break;
+    }
+    case FILE_REQUEST_REGEX.test(route): {
+      let hash = route.split("/file/")[1];
+      getPair(hash);
     }
   }
 });
@@ -66,6 +78,16 @@ function scan() {
 function uploadFile() {
   let message = "ack";
   socketUDP.send(message, portServerUDP, "localhost", (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
+}
+
+function getPair(hash) {
+  let { nodePort, nodeIp } = files.get(hash);
+  let pair = { nodePort, nodeIp };
+  socketUDP.send(JSON.stringify(pair), portServerUDP, "localhost", (err) => {
     if (err) {
       console.log(err);
     }
