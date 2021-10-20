@@ -3,6 +3,9 @@ const portServerUDP = 4001;
 const dgram = require("dgram"); //conexiones UDP
 const socketUDP = dgram.createSocket("udp4"); //socket para UDP
 
+const SCAN_REGEX = /^\/scan$/;
+const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/;
+
 var files = {
   HASH_1: {
     filename: "example_file1",
@@ -32,10 +35,16 @@ socketUDP.on("error", (err) => {
 
 socketUDP.on("message", (msg, rinfo) => {
   console.log(`(UDP) recibido: ${msg} desde ${rinfo.address}:${rinfo.port}`);
-
-  if (msg == "/scan") {
-    //si el mensaje es un scan llamo a la funcion scan para que devuelva los files
-    scan();
+  let parsedMsg = JSON.parse(msg);
+  let route = parsedMsg.route;
+  switch (true) {
+    case SCAN_REGEX.test(route): {
+      scan();
+      break;
+    }
+    case STORE_REGEX.test(route): {
+      uploadFile();
+    }
   }
 });
 
@@ -51,6 +60,15 @@ function scan() {
       console.log(err);
     }
     //socketUDP.close(); deberia cerrarse?
+  });
+}
+
+function uploadFile() {
+  let message = "ack";
+  socketUDP.send(message, portServerUDP, "localhost", (err) => {
+    if (err) {
+      console.log(err);
+    }
   });
 }
 
