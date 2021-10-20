@@ -35,7 +35,6 @@ app.get("/file", (req, res) => {
     .getAllFiles()
     .then((files) => {
       res.setHeader("Content-Type", "application/json").status(200);
-      console.log(files);
       res.end(JSON.stringify(files));
     })
     .catch((err) => {
