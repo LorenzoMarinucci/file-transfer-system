@@ -43,7 +43,6 @@ socketUDP.on("message", (msg, rinfo) => {
   console.log(`(UDP) recibido: ${msg} desde ${rinfo.address}:${rinfo.port}`);
   let parsedMsg = JSON.parse(msg);
   let route = parsedMsg.route;
-  console.log(FILE_REQUEST_REGEX.test(route));
   switch (true) {
     case SCAN_REGEX.test(route): {
       scan();
@@ -65,8 +64,8 @@ socketUDP.bind(portTracker); //se pone a escuchar para UDP
 //scan
 function scan() {
   //deberia pedir por UDP los objetos files de todos los nodos tracker restantes y luego devolverlos
-
-  let message = JSON.stringify(files);
+  const mapToObject = Object.fromEntries(files);
+  let message = JSON.stringify(mapToObject);
   socketUDP.send(message, portServerUDP, "localhost", (err) => {
     if (err) {
       console.log(err);
