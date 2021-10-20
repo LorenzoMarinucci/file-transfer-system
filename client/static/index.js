@@ -1,4 +1,4 @@
-const URL_FILES = "http://localhost:8080/file";
+const URL_FILES = "http://localhost:4000/file";
 
 const ListResponse = document.querySelector("#files-list");
 
@@ -31,8 +31,56 @@ function CustomAlert() {
     document.getElementById("file-size").innerHTML = "Tamaño: ";
   };
   this.ok = function () {
-    document.getElementById("popUpBox").style.display = "none";
-    document.getElementById("popUpOverlay").style.display = "none";
+    if (
+      document.getElementById("ip-input").value === "" ||
+      document.getElementById("port-input").value === ""
+    ) {
+      window.alert("Debe ingresar IP y Puerto válidos");
+    } else {
+      const data = {
+        id:
+          document
+            .getElementById("file-name")
+            .innerHTML.replace("Nombre del archivo: ", "") +
+          document
+            .getElementById("file-size")
+            .innerHTML.replace("Tamaño: ", "")
+            .replace(" bytes", ""),
+        fileName: document
+          .getElementById("file-name")
+          .innerHTML.replace("Nombre del archivo: ", ""),
+        fileSize: document
+          .getElementById("file-size")
+          .innerHTML.replace("Tamaño: ", "")
+          .replace(" bytes", ""),
+        nodeIP: document.getElementById("ip-input").value,
+        nodePort: document.getElementById("port-input").value,
+      };
+
+      async function postData(url, data) {
+        const response = await fetch(url, {
+          method: "POST",
+          mode: "cors",
+          cache: "no-cache",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          redirect: "follow",
+          referrerPolicy: "no-referrer",
+          body: JSON.stringify(data),
+        });
+        console.log(data);
+        return response.json();
+      }
+
+      postData(URL_FILES, data).then((res) => {
+        console.log("Respuesta");
+      });
+
+      document.getElementById("popUpBox").style.display = "none";
+      document.getElementById("popUpOverlay").style.display = "none";
+    }
   };
 }
 

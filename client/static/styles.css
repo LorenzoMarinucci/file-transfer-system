@@ -11,7 +11,7 @@ html {
 
 header {
   min-height: 15vh;
-  background-color: rgb(114, 88, 129);
+  background-color: black;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -28,20 +28,17 @@ main {
 footer {
   border-top: 0.5px black solid;
   min-height: 10vh;
-  background-color: rgb(114, 88, 129);
+  background-color: black;
   padding-top: 5px;
   display: flex;
   justify-content: center;
   text-align: center;
+  color: white;
 }
 
 #contact-info {
-  width: 15%;
+  width: 50%;
   margin: auto;
-}
-
-#contact-info ul {
-  list-style-type: none;
 }
 
 #contact-info h4 {
@@ -50,9 +47,15 @@ footer {
   margin-bottom: 5px;
 }
 
-#contact-info ul li {
-  font-size: 1.2rem;
-  padding: 2px 0px;
+#names {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+#names div {
+  margin-right: 20px;
+  margin-left: 20px;
 }
 
 #logo {
@@ -66,7 +69,7 @@ footer {
 }
 
 #files {
-  background-color: white;
+  background-color: rgb(125, 75, 155);
   width: 100%;
   min-height: 75vh;
   font-size: medium;
@@ -75,9 +78,10 @@ footer {
 }
 
 #files-list {
+  border-radius: 20px;
   background-color: rgb(202, 158, 228);
   width: 95%;
-  min-height: 63vh;
+  min-height: 62vh;
   margin: 0 auto;
 }
 
@@ -92,7 +96,11 @@ footer {
 
 #title-list {
   text-align: center;
-  margin: 10px;
+  margin-top: 10px;
+  background-color: white;
+  display: inline-block;
+  padding: 5px;
+  border-radius: 5px;
 }
 
 #update-button {
