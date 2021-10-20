@@ -8,16 +8,12 @@ function sendUdpMessage(msg, address, port, localPort) {
       let addr = socketUDP.address();
       socketUDP.send(msg, port, address, (err) => {
         if (err) {
-          console.error("Error while sending UDP message: " + err);
           reject(err);
         }
       });
     });
 
     socketUDP.on("message", (msg, rinfo) => {
-      console.log(
-        `[UDP] Message received: ${msg} from ${rinfo.address}:${rinfo.port}`
-      );
       socketUDP.close();
       resolve(msg);
     });

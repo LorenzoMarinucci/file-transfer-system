@@ -1,5 +1,5 @@
 const portTracker = 8082;
-const portServerUDP = 8081;
+const portServerUDP = 4001;
 const dgram = require("dgram"); //conexiones UDP
 const socketUDP = dgram.createSocket("udp4"); //socket para UDP
 

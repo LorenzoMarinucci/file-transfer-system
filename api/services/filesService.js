@@ -1,21 +1,25 @@
 const { sendUdpMessage } = require("../../middleware/communication");
-require("dotenv").config();
-const TRACKER_PORT = process.env.TRACKER_PORT;
-const TRACKER_ADDRESS = process.env.TRACKER_ADDRESS;
-const LOCAL_PORT = process.env.TCP_PORT;
+const log = require("../winston/logger");
+const {
+  trackerPort,
+  trackerAddress,
+  udpListeningPort,
+} = require("../env/config");
+
 const SCAN_MSG = "/scan";
 
 function getAllFiles() {
   return new Promise((resolve, reject) => {
-    sendUdpMessage(SCAN_MSG, TRACKER_ADDRESS, TRACKER_PORT, LOCAL_PORT)
+    sendUdpMessage(SCAN_MSG, trackerAddress, trackerPort, udpListeningPort)
       .then((val) => {
-        console.log("Succesful response from tracker.");
-        let value = JSON.parse(val.toString("utf-8"));
-        resolve(value);
+        log.info("Succesful response from tracker.");
+        console.log("services " + val);
+        resolve(JSON.parse(val.toString("utf-8")));
       })
-      .catch((error) => {
-        console.log("Error while requesting files from tracker.");
-        reject(error);
+      .catch((err) => {
+        console.log("err");
+        log.error("Error while requesting files from tracker.");
+        reject(err);
       });
   });
 }
