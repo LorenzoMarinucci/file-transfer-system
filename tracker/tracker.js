@@ -84,8 +84,7 @@ function uploadFile() {
 }
 
 function getPair(hash) {
-  let { nodePort, nodeIp } = files.get(hash);
-  let pair = { nodePort, nodeIp };
+  let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
   socketUDP.send(JSON.stringify(pair), portServerUDP, "localhost", (err) => {
     if (err) {
       console.log(err);

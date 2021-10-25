@@ -38,14 +38,14 @@ function CustomAlert() {
       window.alert("Debe ingresar IP y Puerto válidos");
     } else {
       const data = {
-        id:
+        /* id:
           document
             .getElementById("file-name")
             .innerHTML.replace("Nombre del archivo: ", "") +
           document
             .getElementById("file-size")
             .innerHTML.replace("Tamaño: ", "")
-            .replace(" bytes", ""),
+            .replace(" bytes", ""),*/
         fileName: document
           .getElementById("file-name")
           .innerHTML.replace("Nombre del archivo: ", ""),
