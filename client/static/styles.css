@@ -75,6 +75,7 @@ footer {
   font-size: medium;
   text-align: center;
   display: block;
+  list-style-type:none;
 }
 
 #files-list {
@@ -85,9 +86,14 @@ footer {
   margin: 0 auto;
 }
 
+#files-list ul {
+  list-style-type:none;
+}
+
 #files-list li {
   box-shadow: 1px lightgray;
   padding: 2px;
+  cursor: pointer;
 }
 
 #files-list li:hover {
