@@ -1,11 +1,13 @@
 const portTracker = 8082;
 const portServerUDP = 4001;
+const { count } = require("console");
 const dgram = require("dgram"); //conexiones UDP
 const socketUDP = dgram.createSocket("udp4"); //socket para UDP
 
 const SCAN_REGEX = /^\/scan$/;
 const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/;
 const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/;
+const COUNT_REGEX = /^\/count$/;
 
 const files = new Map();
 
@@ -56,6 +58,9 @@ socketUDP.on("message", (msg, rinfo) => {
       let hash = route.split("/file/")[1];
       getPair(hash);
     }
+    case COUNT_REGEX.test(route): {
+      count();
+    }
   }
 });
 
@@ -70,7 +75,6 @@ function scan() {
     if (err) {
       console.log(err);
     }
-    //socketUDP.close(); deberia cerrarse?
   });
 }
 
@@ -100,4 +104,19 @@ function addFile(filename, filesize, par) {
     filesize,
     par,
   };
+}
+
+//debe contar todos los trackers y archivos del sistema, por ahora solo trabaja en el tracker actual
+function count(){
+  body = {
+    trackerCount: 1, //se deberia aumentar en 1 por cada tracker que pasa, por ahora queda asi
+    fileCount: files.size
+  }
+
+  let message = JSON.stringify();
+  socketUDP.send(message, portServerUDP, "localhost", (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
 }
