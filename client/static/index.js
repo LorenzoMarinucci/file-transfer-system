@@ -2,20 +2,25 @@ const URL_FILES = "http://localhost:4000/file";
 
 const ListResponse = document.querySelector("#files-list");
 
-fetch(URL_FILES)
-  .then((response) => response.json())
-  .then((value) => {
-    let tpl = "";
-    Object.entries(value).map((entry) => {
-      let hash = entry[0];
-      let file = entry[1];
-      let filename = file.filename;
-      let filesize = file.filesize;
-      let par = file.par;
-      tpl += `<li>${hash} ${filename} ${filesize} ${par}<a href=""><img src="./img/download_icon.png" style="height: 20px; width: 20px"/></a></li>`;
+listFiles();
+
+function listFiles() {
+  fetch(URL_FILES)
+    .then((response) => response.json())
+    .then((value) => {
+      let tpl = "";
+      Object.entries(value).map((entry) => {
+        let hash = entry[0];
+        let file = entry[1];
+        let filename = file.filename;
+        let filesize = file.filesize;
+        let par = file.par;
+        let url = URL_FILES + "/" + hash;
+        tpl += `<li>${hash} ${filename} ${filesize} ${par}<a href="${url}"><img src="./img/download_icon.png" style="height: 20px; width: 20px"/></a></li>`;
+      });
+      ListResponse.innerHTML = `<ul>${tpl}</ul>`;
     });
-    ListResponse.innerHTML = `<ul>${tpl}</ul>`;
-  });
+}
 
 var Alert = new CustomAlert();
 
@@ -45,7 +50,6 @@ function CustomAlert() {
           .getElementById("file-size")
           .innerHTML.replace("Tamaño: ", "")
           .replace(" bytes", ""),
-        id: fileName + fileSize,
         nodeIP: document.getElementById("ip-input").value,
         nodePort: document.getElementById("port-input").value,
       };
@@ -53,23 +57,27 @@ function CustomAlert() {
       async function postData(url, data) {
         const response = await fetch(url, {
           method: "POST",
-          mode: "cors",
-          cache: "no-cache",
-          credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
           },
-          redirect: "follow",
-          referrerPolicy: "no-referrer",
           body: JSON.stringify(data),
         });
-        console.log(data);
         return response.json();
       }
 
-      postData(URL_FILES, data).then((res) => {
-        console.log("Respuesta");
-      });
+      postData(URL_FILES, data)
+        .then(function (response) {
+          if (response.ok) {
+            console.log(response);
+          } else {
+            console.log("Respuesta de red OK pero respuesta HTTP no OK");
+          }
+        })
+        .catch(function (error) {
+          console.log(
+            "Hubo un problema con la petición Fetch:" + error.message
+          );
+        });
 
       document.getElementById("popUpBox").style.display = "none";
       document.getElementById("popUpOverlay").style.display = "none";
