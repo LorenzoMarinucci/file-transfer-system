@@ -107,11 +107,11 @@ function addFile(filename, filesize, par) {
 }
 
 //debe contar todos los trackers y archivos del sistema, por ahora solo trabaja en el tracker actual
-function count(){
+function countt() {
   body = {
     trackerCount: 1, //se deberia aumentar en 1 por cada tracker que pasa, por ahora queda asi
-    fileCount: files.size
-  }
+    fileCount: files.size,
+  };
 
   let message = JSON.stringify();
   socketUDP.send(message, portServerUDP, "localhost", (err) => {

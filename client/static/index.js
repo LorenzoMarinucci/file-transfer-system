@@ -12,7 +12,7 @@ fetch(URL_FILES)
       let filename = file.filename;
       let filesize = file.filesize;
       let par = file.par;
-      tpl += `<li> ${hash} ${filename} ${filesize} ${par}</li>`;
+      tpl += `<li>${hash} ${filename} ${filesize} ${par}<a href=""><img src="./img/download_icon.png" style="height: 20px; width: 20px"/></a></li>`;
     });
     ListResponse.innerHTML = `<ul>${tpl}</ul>`;
   });
@@ -45,6 +45,7 @@ function CustomAlert() {
           .getElementById("file-size")
           .innerHTML.replace("Tamaño: ", "")
           .replace(" bytes", ""),
+        id: fileName + fileSize,
         nodeIP: document.getElementById("ip-input").value,
         nodePort: document.getElementById("port-input").value,
       };
