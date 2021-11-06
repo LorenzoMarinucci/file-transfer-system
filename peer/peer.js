@@ -43,18 +43,22 @@ inquirer
 
     //console.log(info);
     //aca se realiza la coneccion UDP con el tracker para descargar el archivo a partir de la info en el archivo .torrente
-    let found = torrenteRequest(FILES_DIR + answers.descarga, config.port); //hace la peticion al tracker
-
-    let peerIp = found.body.pares.parIP;
-    let peerPort = found.body.pares.parPort;
-
-    //let peerIp = "127.0.0.1";
-    //let peerPort = 10004;
-    downloader
-      .startDownload("testvuelta.txt", peerIp, peerPort)
+    torrenteRequest.torrenteRequest(FILES_DIR + answers.descarga, config.address, config.port) //hace la peticion al tracker
+    .then( (found) => {
+      let peerIp = found.body.pares[0].parIP;
+      let peerPort = found.body.pares[0].parPort;
+      //let peerIp = "127.0.0.1";
+      //let peerPort = 10004;
+      downloader
+      .startDownload("example_file3.txt", peerIp, peerPort)
       .catch((err) => {
         console.log(err);
       });
+    })
+    .catch((err) => {
+      log.error("Error while requesting tracker.");
+      log.error(err);
+    });
   });
 
 function loadConfig() {

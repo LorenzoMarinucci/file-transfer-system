@@ -1,4 +1,4 @@
-const { sendUdpMessage } = require("../../middleware/communication");
+const { sendUdpMessage } = require("../middleware/communication");
 const fs = require("fs");
 
 function torrenteRequest(filePath, peer_IP, peer_port){
@@ -23,11 +23,11 @@ function torrenteRequest(filePath, peer_IP, peer_port){
     return new Promise((resolve, reject) => {
         sendUdpMessage(JSON.stringify(msg), networkData)
           .then((val) => {
-            log.info("Succesful response from tracker.");
+            console.log("Succesful response from tracker.");
             resolve(JSON.parse(val.toString("utf-8"))); //resuelve mensaje FOUND
           })
           .catch((err) => {
-            log.error("Error while requesting peers from tracker.");
+            console.log("Error while requesting peers from tracker.");
             reject(err);
           });
       });

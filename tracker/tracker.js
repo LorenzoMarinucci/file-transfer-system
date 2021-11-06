@@ -28,8 +28,8 @@ files.set("hash2", {
 files.set("hash3", {
   filename: "example_file3",
   filesize: 21,
-  nodePort: 1,
-  nodeIp: "128.0.0.3",
+  nodePort: 10003,
+  nodeIp: "127.0.0.1",
 });
 
 socketUDP.on("listening", () => {
@@ -116,18 +116,21 @@ function getPair(originMsg) {
 
 function found(originMsg, hash){
   let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
+
   let foundMsg = originMsg;
   foundMsg.body = {
     id: hash,
     trackerIP: '127.0.0.1',
     trackerPort: portTracker,
     pares: [{
-        parIP: nodeIp,
-        parPort: nodePort
+        parIP: pair.nodeIp,
+        parPort: pair.nodePort
     }]
   }
   destination_IP = originMsg.originIP;
   destination_port = originMsg.originPort;
+
+  console.log("found response = " + JSON.stringify(foundMsg));
 
   socketUDP.send(JSON.stringify(foundMsg), destination_port, destination_IP, (err) => {
     if (err) {
@@ -147,7 +150,7 @@ function addFile(filename, filesize, par) {
 }
 
 //debe contar todos los trackers y archivos del sistema, por ahora solo trabaja en el tracker actual
-function count() {
+function countt() {
   body = {
     trackerCount: 1, //se deberia aumentar en 1 por cada tracker que pasa, por ahora queda asi
     fileCount: files.size,

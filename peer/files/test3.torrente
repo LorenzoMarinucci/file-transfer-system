@@ -1,6 +1,6 @@
 {
-        "id": "ejemploID",
-        "trackerIP": "123.123.123.123",
-        "trackerPort": "123"
+        "id": "hash3",
+        "trackerIP": "127.0.0.1",
+        "trackerPort": "8082"
 }
 
