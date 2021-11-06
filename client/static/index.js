@@ -24,17 +24,17 @@ function CustomAlert() {
     ) {
       window.alert("Debe ingresar IP y Puerto válidos");
     } else {
-      const fileName = document
+      const filename = document
         .getElementById("file-name")
         .innerHTML.replace("Nombre del archivo: ", "");
-      const fileSize = document
+      const filesize = document
         .getElementById("file-size")
         .innerHTML.replace("Tamaño: ", "")
         .replace(" bytes", "");
-      const nodeIP = document.getElementById("ip-input").value;
+      const nodeIp = document.getElementById("ip-input").value;
       const nodePort = document.getElementById("port-input").value;
 
-      const data = { fileName, fileSize, nodePort, nodeIP };
+      const data = { filename, filesize, nodePort, nodeIp };
 
         const rawResponse = fetch(URL_FILES, {
           method: "POST",
