@@ -4,10 +4,10 @@ const { count } = require("console");
 const dgram = require("dgram"); //conexiones UDP
 const socketUDP = dgram.createSocket("udp4"); //socket para UDP
 
-const SCAN_REGEX = /^\/scan$/;
-const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/;
-const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/;
-const COUNT_REGEX = /^\/count$/;
+const SCAN_REGEX = /^\/scan$/; //  /scan
+const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/; //  /file/{hash}/store
+const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/; //  /file/{hash}
+const COUNT_REGEX = /^\/count$/; //  /count
 
 const files = new Map();
 
@@ -55,8 +55,10 @@ socketUDP.on("message", (msg, rinfo) => {
       break;
     }
     case FILE_REQUEST_REGEX.test(route): {
-      let hash = route.split("/file/")[1];
-      getPair(hash);
+
+      //let hash = route.split("/file/")[1];
+      //getPair(hash);
+      getPair(parsedMsg); //paso el mensaje completo porque necesito los datos para devolver un found o replicar el search
     }
     case COUNT_REGEX.test(route): {
       count();
@@ -87,9 +89,47 @@ function uploadFile() {
   });
 }
 
+/*
 function getPair(hash) {
   let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
+  //si lo encuentra debe devolver un found, sino pasar el mensaje al siguiente tracker.
+  found();
+
   socketUDP.send(JSON.stringify(pair), portServerUDP, "localhost", (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
+}
+*/
+
+function getPair(originMsg) {
+
+  let route = originMsg.route;
+  let hash = route.split("/file/")[1];
+  let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
+  //si lo encuentra debe devolver un found, sino pasar el mensaje al siguiente tracker.
+  found(originMsg, hash);
+  //else --> search al nodo siguiente...
+
+}
+
+function found(originMsg, hash){
+  let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
+  let foundMsg = originMsg;
+  foundMsg.body = {
+    id: hash,
+    trackerIP: '127.0.0.1',
+    trackerPort: portTracker,
+    pares: [{
+        parIP: nodeIp,
+        parPort: nodePort
+    }]
+  }
+  destination_IP = originMsg.originIP;
+  destination_port = originMsg.originPort;
+
+  socketUDP.send(JSON.stringify(foundMsg), destination_port, destination_IP, (err) => {
     if (err) {
       console.log(err);
     }
@@ -107,7 +147,7 @@ function addFile(filename, filesize, par) {
 }
 
 //debe contar todos los trackers y archivos del sistema, por ahora solo trabaja en el tracker actual
-function countt() {
+function count() {
   body = {
     trackerCount: 1, //se deberia aumentar en 1 por cada tracker que pasa, por ahora queda asi
     fileCount: files.size,
