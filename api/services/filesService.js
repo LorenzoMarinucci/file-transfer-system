@@ -1,10 +1,13 @@
 const { sendUdpMessage } = require("../../middleware/communication");
+const { v4: uuidv4 } = require("uuid");
 const log = require("../winston/logger");
 const sha1 = require("sha-1");
+
 const {
   trackerPort,
   trackerAddress,
   udpListeningPort,
+  hostname,
 } = require("../env/config");
 
 const SCAN_MSG = "/scan";
@@ -18,12 +21,19 @@ let udpConfig = {
 };
 
 function getAllFiles() {
-  let msg = { route: SCAN_MSG };
+  let msg = {
+    messageId: uuidv4(),
+    route: SCAN_MSG,
+    originIP: hostname,
+    originPort: udpListeningPort,
+  };
+
   return new Promise((resolve, reject) => {
-    sendUdpMessage(JSON.stringify(msg), udpConfig)
+    sendUdpMessage(JSON.stringify(msg), udpConfig, true)
       .then((val) => {
         log.info("Succesful response from tracker.");
-        resolve(JSON.parse(val.toString("utf-8")));
+        let msg = JSON.parse(val.toString("utf-8"));
+        resolve(msg.body.files);
       })
       .catch((err) => {
         log.error("Error while requesting files from tracker.");
@@ -33,11 +43,28 @@ function getAllFiles() {
 }
 
 function saveFile(file) {
-  let hash = sha1(file.id);
+  let hash = sha1(file.filename + file.filesize);
   let route = STORE_MSG.replace("{hash}", hash);
-  let msg = { route, body: file };
+  let msg = {
+    messageId: uuidv4(),
+    route,
+    originIP: hostname,
+    originPort: udpListeningPort,
+    body: {
+      id: file.id,
+      filename: file.filename,
+      filesize: file.filesize,
+      pares: [
+        {
+          parIP: file.nodeIp,
+          parPort: file.nodePort,
+        },
+      ],
+    },
+  };
+
   return new Promise((resolve, reject) => {
-    sendUdpMessage(JSON.stringify(msg), udpConfig)
+    sendUdpMessage(JSON.stringify(msg), udpConfig, false)
       .then((val) => {
         log.info("File saved.");
         resolve(val);
@@ -51,9 +78,14 @@ function saveFile(file) {
 
 function requestFile(hash) {
   let route = SEARCH_FILE_MSG.replace("{hash}", hash);
-  let msg = { route };
+  let msg = {
+    messageId: uuidv4(),
+    route,
+    originIP: hostname,
+    originPort: udpListeningPort,
+  };
   return new Promise((resolve, reject) => {
-    sendUdpMessage(JSON.stringify(msg), udpConfig)
+    sendUdpMessage(JSON.stringify(msg), udpConfig, true)
       .then((val) => {
         log.info("File obtained.");
         resolve(val);

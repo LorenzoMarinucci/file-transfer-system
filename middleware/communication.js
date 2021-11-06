@@ -1,6 +1,6 @@
 const dgram = require("dgram");
 
-function sendUdpMessage(msg, { address, port, localPort }) {
+function sendUdpMessage(msg, { address, port, localPort }, awaitResponse) {
   return new Promise((resolve, reject) => {
     const socketUDP = dgram.createSocket("udp4");
 
@@ -10,6 +10,10 @@ function sendUdpMessage(msg, { address, port, localPort }) {
         if (err) {
           socketUDP.close();
           reject(err);
+        }
+        if (!awaitResponse) {
+          socketUDP.close();
+          resolve();
         }
       });
     });

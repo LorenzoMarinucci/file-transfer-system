@@ -1,17 +1,49 @@
-const portTracker = 8082;
-const portServerUDP = 4001;
-const { count } = require("console");
-const dgram = require("dgram"); //conexiones UDP
-const socketUDP = dgram.createSocket("udp4"); //socket para UDP
+const config = require("./config/config");
+const { sendUdpMessage } = require("../middleware/communication");
+
+// EXPRESIONES REGULARES PARA LOS ROUTE
 
 const SCAN_REGEX = /^\/scan$/; //  /scan
 const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/; //  /file/{hash}/store
 const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/; //  /file/{hash}
 const COUNT_REGEX = /^\/count$/; //  /count
 
+// CONEXIÓN UDP
+
+const dgram = require("dgram"); //conexiones UDP
+const socket = dgram.createSocket("udp4"); //socket para UDP
+socket.bind({
+  port: config.localPort,
+  address: config.localAddress,
+});
+
+// DHT
+
 const files = new Map();
 
-files.set("hash1", {
+// MENSAJES
+
+const messages = [];
+
+// ARCIVOS
+
+class File {
+  constructor(id, filename, filesize, parIp, parPort) {
+    this.id = id;
+    this.filename = filename;
+    this.filesize = filesize;
+    this.pares = [];
+    this.pares.push({ parIp, parPort });
+  }
+
+  addPar(parIp, parPort) {
+    if (!this.pares.includes({ parIp, parPort })) {
+      this.pares.push({ parIp, parPort });
+    }
+  }
+}
+
+/* files.set("hash1", {
   filename: "example_file1",
   filesize: 21,
   nodePort: 1,
@@ -30,136 +62,282 @@ files.set("hash3", {
   filesize: 21,
   nodePort: 10003,
   nodeIp: "127.0.0.1",
+}); */
+
+socket.on("listening", () => {
+  let addr = socket.address();
+  console.log(`Tracker iniciado en ${addr.address}:${addr.port}`);
 });
 
-socketUDP.on("listening", () => {
-  let addr = socketUDP.address();
-  console.log(`Listening for UDP packets at ${addr.address}:${addr.port}`);
-});
-
-socketUDP.on("error", (err) => {
+socket.on("error", (err) => {
   console.error(`UDP error: ${err.stack}`);
 });
 
-socketUDP.on("message", (msg, rinfo) => {
-  console.log(`(UDP) recibido: ${msg} desde ${rinfo.address}:${rinfo.port}`);
+socket.on("message", (msg, rinfo) => {
+  console.log(
+    `[UDP] Mensaje recibido: ${msg} desde ${rinfo.address}:${rinfo.port}`
+  );
   let parsedMsg = JSON.parse(msg);
   let route = parsedMsg.route;
+
   switch (true) {
     case SCAN_REGEX.test(route): {
-      scan();
+      scan(parsedMsg);
       break;
     }
     case STORE_REGEX.test(route): {
-      uploadFile();
+      store(parsedMsg);
       break;
     }
     case FILE_REQUEST_REGEX.test(route): {
-
-      //let hash = route.split("/file/")[1];
-      //getPair(hash);
-      getPair(parsedMsg); //paso el mensaje completo porque necesito los datos para devolver un found o replicar el search
+      search(parsedMsg); //paso el mensaje completo porque necesito los datos para devolver un found o replicar el search
+      break;
     }
     case COUNT_REGEX.test(route): {
-      count();
+      count(parsedMsg);
+      break;
     }
   }
 });
 
-socketUDP.bind(portTracker); //se pone a escuchar para UDP
+function scan(msg) {
+  // ANALIZAR SI EL MENSAJE YA FUE RECIBIDO
 
-//scan
-function scan() {
-  //deberia pedir por UDP los objetos files de todos los nodos tracker restantes y luego devolverlos
-  const mapToObject = Object.fromEntries(files);
-  let message = JSON.stringify(mapToObject);
-  socketUDP.send(message, portServerUDP, "localhost", (err) => {
-    if (err) {
-      console.log(err);
+  if (messages.includes(msg.messageId)) {
+    messages.splice(msg.messageId);
+    sendUdpMessage(
+      JSON.stringify(msg),
+      { address: msg.originIP, port: msg.originPort },
+      false
+    ).then(() => {
+      console.log("SCAN retornado al origen.");
+    });
+  } else {
+    // AÑADIR LA ID DEL MENSAJE COMO LEÍDO
+    messages.push(msg.messageId);
+    if (!msg.body) {
+      msg.body = {
+        files: [],
+      };
     }
-  });
+
+    // OBTENER CADA HASH EN LA DHT. POR CADA HASH, ITERAR POR LOS ARCHIVOS CORRESPONDIENTES (COINCIDENTES EN LOS 2 PRIMEROS CARACTERES)
+
+    files.forEach((matchingFiles) => {
+      matchingFiles.forEach((file) => {
+        msg.body.files.push({
+          id: file.id,
+          filename: file.filename,
+          filesize: file.filesize,
+        });
+      });
+    });
+
+    sendUdpMessage(
+      JSON.stringify(msg),
+      { address: config.rightTrackerAddress, port: config.rightTrackerPort },
+      false
+    ).then(() => {
+      console.log("Mensaje SCAN pasado a tracker derecho.");
+    });
+  }
 }
 
-function uploadFile() {
-  let message = "ack";
-  socketUDP.send(message, portServerUDP, "localhost", (err) => {
-    if (err) {
-      console.log(err);
+function store(msg) {
+  // NO SE VERIFICA ID, YA QUE MINIMAMENTE ALGUN NODO GUARDARA EL ARCHIVO
+  messages.push(msg.messageId);
+
+  let hash = msg.body.id.substring(0, 2);
+
+  if (hash > config.trackerId) {
+    // EL ID NO ES MAYOR AL HASH QUE SE QUIERE ALMACENAR, PASA EL MENSAJE AL TRACKER DERECHO, QUE POSEE MAYOR ID
+    // TO-DO: reenviar mensaje al tracker derecho
+    sendUdpMessage(
+      JSON.stringify(msg),
+      { address: config.rightTrackerAddress, port: config.rightTrackerPort },
+      false
+    ).then(() => {
+      console.log("Mensaje STORE pasado a tracker derecho.");
+    });
+  } else {
+    if (config.leftTrackerId > hash) {
+      // EL ID ES MAYOR AL HASH, PERO NO ES EL MENOR DE LOS MAYORES. PASA EL MENSAJE AL TRACKER IZQ
+      // TO-DO: reenviar mensaje al tracker izquierdo
+      sendUdpMessage(
+        JSON.stringify(msg),
+        { address: config.leftTrackerAddress, port: config.leftTrackerPort },
+        false
+      ).then(() => {
+        console.log("Mensaje STORE pasado a tracker izquierdo.");
+      });
+    } else {
+      // EL HASH ESTÁ DENTRO DEL DOMINIO DEL TRACKER
+      if (files.keys.includes(hash)) {
+        // SE REVISA SI LOS 2 CARACTERES DEL HASH YA PERTENECEN A LA DHT
+        matchingFiles = files.get(hash);
+        file = matchingFiles.filter((possibleFile) => {
+          // BUSCA SI EL ARCHIVO YA EXISTE EN LA DHT. LOS IDS DEBEN SER IGUALES
+          return possibleFile.id === msg.body.id;
+        });
+
+        if (file) {
+          // EL ARCHIVO EXISTE, SE AGREGAN LOS NUEVOS PARES
+          file.addPar(msg.body.parIP, msg.body.parPort);
+        } else {
+          // EL ARCHIVO NO EXISTE, SE LO AGREGA AL BUCKET
+          let file = new File(
+            msg.body.id,
+            msg.body.filename,
+            msg.body.filesize,
+            msg.body.parIP,
+            msg.body.parPort
+          );
+          matchingFiles.push(file);
+        }
+      } else {
+        // LOS CARACTERES NO EXISTEN EN LA DHT
+        // CREA EL ARRAY CORRESPONDIENTE A LOS CARACTERES E INSERTA EL NUEVO ARCHIVO
+        let file = new File(
+          msg.body.id,
+          msg.body.filename,
+          msg.body.filesize,
+          msg.body.parIP,
+          msg.body.parPort
+        );
+        files.set(hash, [file]);
+      }
+      let file = new File(msg.body.id);
     }
-  });
+  }
 }
 
-/*
-function getPair(hash) {
-  let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
-  //si lo encuentra debe devolver un found, sino pasar el mensaje al siguiente tracker.
-  found();
+function search(msg) {
+  if (messages.includes(msg.messageId)) {
+    messages.splice(msg.messageId);
+    // EL MENSAJE DIO TODA LA VUELTA
+  } else {
+    let hash = msg.route.split("/file/")[1];
+    let bucket = hash.substring(0, 2);
+    if (bucket > config.trackerId) {
+      //TO-DO: ENVIAR MENSAJE A TRACKER DERECHO
+      sendUdpMessage(
+        JSON.stringify(msg),
+        { address: config.rightTrackerAddress, port: config.rightTrackerPort },
+        false
+      ).then(() => {
+        console.log("Mensaje SEARCH pasado a tracker derecho.");
+      });
+    } else {
+      if (config.leftTrackerId > bucket) {
+        //TO-DO: ENVIAR MENSAJE A TRACKER IZQ
+        sendUdpMessage(
+          JSON.stringify(msg),
+          { address: config.leftTrackerAddress, port: config.leftTrackerPort },
+          false
+        ).then(() => {
+          console.log("Mensaje SEARCH pasado a tracker izquierdo.");
+        });
+      } else {
+        // ARCHIVO ESTA DENTRO DEL DOMINIO
+        matchingFiles = files.get(bucket);
+        file = matchinfFiles.filter((possibleMatch) => {
+          return hash === possibleMatch.id;
+        });
 
-  socketUDP.send(JSON.stringify(pair), portServerUDP, "localhost", (err) => {
-    if (err) {
-      console.log(err);
+        if (file) {
+          // LO ENCONTRO, ENVIAR FOUND
+          let pairs = file.pairs;
+          msg.body = file;
+          sendUdpMessage(
+            JSON.stringify(msg),
+            {
+              address: config.rightTrackerAddress,
+              port: config.righTrackerPort,
+            },
+            false
+          ).then(() => {
+            console.log("Mensaje FOUND pasado al origen.");
+          });
+        } else {
+          // NO ENCONTRADO
+        }
+      }
     }
-  });
+  }
 }
-*/
 
 function getPair(originMsg) {
-
   let route = originMsg.route;
   let hash = route.split("/file/")[1];
   let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
   //si lo encuentra debe devolver un found, sino pasar el mensaje al siguiente tracker.
   found(originMsg, hash);
   //else --> search al nodo siguiente...
-
 }
 
-function found(originMsg, hash){
+function found(originMsg, hash) {
   let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
 
   let foundMsg = originMsg;
   foundMsg.body = {
     id: hash,
-    trackerIP: '127.0.0.1',
+    trackerIP: "127.0.0.1",
     trackerPort: portTracker,
-    pares: [{
+    pares: [
+      {
         parIP: pair.nodeIp,
-        parPort: pair.nodePort
-    }]
-  }
+        parPort: pair.nodePort,
+      },
+    ],
+  };
   destination_IP = originMsg.originIP;
   destination_port = originMsg.originPort;
 
   console.log("found response = " + JSON.stringify(foundMsg));
 
-  socketUDP.send(JSON.stringify(foundMsg), destination_port, destination_IP, (err) => {
-    if (err) {
-      console.log(err);
+  socket.send(
+    JSON.stringify(foundMsg),
+    destination_port,
+    destination_IP,
+    (err) => {
+      if (err) {
+        console.log(err);
+      }
     }
-  });
+  );
 }
 
-//agregar un nuevo archivo
-function addFile(filename, filesize, par) {
-  let hash = "sha1"; //obtener hash SHA-1 para agregar al diccionario "files" como key
-  files.hash = {
-    filename,
-    filesize,
-    par,
-  };
+function count(msg) {
+  if (messages.includes(msg.messageId)) {
+    messages.splice(msg.messageId);
+    // EL MENSAJE VUELVE AL ORIGEN Y CORTA
+    console.log("Tracker count: " + msg.body.trackerCount);
+    console.log("File count: " + msg.body.fileCount);
+  } else {
+    msg.body.trackerCount += 1;
+    fileCount = countFiles();
+    msg.body.fileCount += fileCount;
+    // TO-DO: ENVIAR MENSAJE A TRACKER DERECHO
+    sendUdpMessage(
+      JSON.stringify(msg),
+      {
+        address: config.rightTrackerAddress,
+        port: config.righTrackerPort,
+      },
+      false
+    ).then(() => {
+      console.log("Mensaje COUNT pasado a tracker derecho.");
+    });
+  }
 }
 
-//debe contar todos los trackers y archivos del sistema, por ahora solo trabaja en el tracker actual
-function countt() {
-  body = {
-    trackerCount: 1, //se deberia aumentar en 1 por cada tracker que pasa, por ahora queda asi
-    fileCount: files.size,
-  };
-
-  let message = JSON.stringify();
-  socketUDP.send(message, portServerUDP, "localhost", (err) => {
-    if (err) {
-      console.log(err);
-    }
+function countFiles() {
+  let count = 0;
+  files.forEach((matchingFiles) => {
+    matchingFiles.forEach((file) => {
+      count += 1;
+    });
   });
+
+  return count;
 }
