@@ -1,26 +1,8 @@
-const URL_FILES = "http://localhost:4000/file";
+const URL_FILES = "http://localhost:4000/file/";
 
 const ListResponse = document.querySelector("#files-list");
 
 listFiles();
-
-function listFiles() {
-  fetch(URL_FILES)
-    .then((response) => response.json())
-    .then((value) => {
-      let tpl = "";
-      Object.entries(value).map((entry) => {
-        let hash = entry[0];
-        let file = entry[1];
-        let filename = file.filename;
-        let filesize = file.filesize;
-        let par = file.par;
-        let url = URL_FILES + "/" + hash;
-        tpl += `<li>${hash} ${filename} ${filesize} ${par}<a href="${url}"><img src="./img/download_icon.png" style="height: 20px; width: 20px"/></a></li>`;
-      });
-      ListResponse.innerHTML = `<ul>${tpl}</ul>`;
-    });
-}
 
 var Alert = new CustomAlert();
 
@@ -42,42 +24,28 @@ function CustomAlert() {
     ) {
       window.alert("Debe ingresar IP y Puerto válidos");
     } else {
-      const data = {
-        fileName: document
-          .getElementById("file-name")
-          .innerHTML.replace("Nombre del archivo: ", ""),
-        fileSize: document
-          .getElementById("file-size")
-          .innerHTML.replace("Tamaño: ", "")
-          .replace(" bytes", ""),
-        nodeIP: document.getElementById("ip-input").value,
-        nodePort: document.getElementById("port-input").value,
-      };
+      const fileName = document
+        .getElementById("file-name")
+        .innerHTML.replace("Nombre del archivo: ", "");
+      const fileSize = document
+        .getElementById("file-size")
+        .innerHTML.replace("Tamaño: ", "")
+        .replace(" bytes", "");
+      const nodeIP = document.getElementById("ip-input").value;
+      const nodePort = document.getElementById("port-input").value;
 
-      async function postData(url, data) {
-        const response = await fetch(url, {
+      const data = { fileName, fileSize, nodePort, nodeIP };
+
+        const rawResponse = fetch(URL_FILES, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(data),
         });
-        return response.json();
-      }
 
-      postData(URL_FILES, data)
-        .then(function (response) {
-          if (response.ok) {
-            console.log(response);
-          } else {
-            console.log("Respuesta de red OK pero respuesta HTTP no OK");
-          }
-        })
-        .catch(function (error) {
-          console.log(
-            "Hubo un problema con la petición Fetch:" + error.message
-          );
-        });
+        const content = rawResponse.json();
+        console.log(content);
 
       document.getElementById("popUpBox").style.display = "none";
       document.getElementById("popUpOverlay").style.display = "none";
@@ -94,3 +62,22 @@ document.getElementById("file-input").addEventListener("change", (event) => {
   document.getElementById("file-size").innerHTML =
     "Tamaño: " + file.size + " bytes";
 });
+
+function listFiles() {
+  fetch(URL_FILES)
+    .then((response) => response.json())
+    .then((value) => {
+      let tpl = "";
+      Object.entries(value).map((entry) => {
+        let hash = entry[0];
+        let file = entry[1];
+        let filename = file.fileName;
+        let filesize = file.fileSize;
+        let port = file.nodePort;
+        let ip = file.nodeIP;
+        let url = URL_FILES + "/" + hash;
+        tpl += `<li>Hash: ${hash} | Nombre de archivo: ${filename} | Tamaño: ${filesize} bytes | Puerto: ${port} | IP: ${ip}<a href="${url}"><img src="./img/download_icon.png" style="height: 20px; width: 20px"/></a></li>`;
+      });
+      ListResponse.innerHTML = `<ul>${tpl}</ul>`;
+    });
+}
