@@ -68,7 +68,7 @@ app.get("/file/:hash", (req, res) => {
         "Content-Disposition": `attachment; filename="${hash}.torrente"`,
       });
       res.status(200);
-      res.end(node);
+      res.end(JSON.stringify(node));
     })
     .catch((err) => {
       log.error("Fail during file request.");

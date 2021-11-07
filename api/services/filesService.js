@@ -51,7 +51,7 @@ function saveFile(file) {
     originIP: hostname,
     originPort: udpListeningPort,
     body: {
-      id: file.id,
+      id: hash,
       filename: file.filename,
       filesize: file.filesize,
       pares: [
@@ -87,8 +87,15 @@ function requestFile(hash) {
   return new Promise((resolve, reject) => {
     sendUdpMessage(JSON.stringify(msg), udpConfig, true)
       .then((val) => {
+        let response = JSON.parse(val);
+        console.log(response.body.pares[0]);
+        console.log(response.body.pares[1]);
         log.info("File obtained.");
-        resolve(val);
+        resolve({
+          id: response.body.id,
+          trackerIP: response.body.trackerIP,
+          trackerPort: response.body.trackerPort,
+        });
       })
       .catch((err) => {
         log.error("Error while obtaining file.");

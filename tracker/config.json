@@ -1,11 +1,11 @@
 {
-  "trackerId": "ma",
+  "trackerId": "99",
   "localAddress": "127.0.0.1",
   "localPort": 10000,
-  "leftTrackerId": "ea",
+  "leftTrackerId": "zz",
   "leftTrackerAddress": "127.0.0.1",
-  "leftTrackerPort": 100001,
-  "rightTrackerId": "pa",
+  "leftTrackerPort": 10002,
+  "rightTrackerId": "mm",
   "rightTrackerAddress": "127.0.0.1",
-  "rightTrackerPort": 100002
+  "rightTrackerPort": 10001
 }

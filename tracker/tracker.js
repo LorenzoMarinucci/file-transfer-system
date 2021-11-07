@@ -1,4 +1,5 @@
 const config = require("./config/config");
+const { v4: uuidv4 } = require("uuid");
 const { sendUdpMessage } = require("../middleware/communication");
 
 // EXPRESIONES REGULARES PARA LOS ROUTE
@@ -8,9 +9,12 @@ const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/; //  /file/{hash}/store
 const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/; //  /file/{hash}
 const COUNT_REGEX = /^\/count$/; //  /count
 
+const COUNT_ROUTE = "/count";
+
 // CONEXIÓN UDP
 
 const dgram = require("dgram"); //conexiones UDP
+const { type } = require("os");
 const socket = dgram.createSocket("udp4"); //socket para UDP
 socket.bind({
   port: config.localPort,
@@ -28,17 +32,17 @@ const messages = [];
 // ARCIVOS
 
 class File {
-  constructor(id, filename, filesize, parIp, parPort) {
+  constructor(id, filename, filesize, parIP, parPort) {
     this.id = id;
     this.filename = filename;
     this.filesize = filesize;
     this.pares = [];
-    this.pares.push({ parIp, parPort });
+    this.pares.push({ parIP, parPort });
   }
 
-  addPar(parIp, parPort) {
-    if (!this.pares.includes({ parIp, parPort })) {
-      this.pares.push({ parIp, parPort });
+  addPar(parIP, parPort) {
+    if (!this.pares.includes({ parIP, parPort })) {
+      this.pares.push({ parIP, parPort });
     }
   }
 }
@@ -160,9 +164,13 @@ function store(msg) {
       console.log("Mensaje STORE pasado a tracker derecho.");
     });
   } else {
-    if (config.leftTrackerId > hash) {
-      // EL ID ES MAYOR AL HASH, PERO NO ES EL MENOR DE LOS MAYORES. PASA EL MENSAJE AL TRACKER IZQ
-      // TO-DO: reenviar mensaje al tracker izquierdo
+    if (
+      config.leftTrackerId >= hash &&
+      config.leftTrackerId < config.trackerId
+    ) {
+      // EL ID ES MAYOR AL HASH, PERO NO ES EL MENOR DE LOS MAYORES.
+      // TAMBIEN SE VERIFICA QUE EL ID IZQ NO SEA MAYOR AL ACTUAL (EN DICHO CASO, EL IZQ SERÍA EL ÚLTIMO)
+      // PASA EL MENSAJE AL TRACKER IZQ
       sendUdpMessage(
         JSON.stringify(msg),
         { address: config.leftTrackerAddress, port: config.leftTrackerPort },
@@ -172,25 +180,25 @@ function store(msg) {
       });
     } else {
       // EL HASH ESTÁ DENTRO DEL DOMINIO DEL TRACKER
-      if (files.keys.includes(hash)) {
+      if (files.has(hash)) {
         // SE REVISA SI LOS 2 CARACTERES DEL HASH YA PERTENECEN A LA DHT
-        matchingFiles = files.get(hash);
-        file = matchingFiles.filter((possibleFile) => {
+        let matchingFiles = files.get(hash);
+        let file = matchingFiles.find((possibleFile) => {
           // BUSCA SI EL ARCHIVO YA EXISTE EN LA DHT. LOS IDS DEBEN SER IGUALES
           return possibleFile.id === msg.body.id;
         });
 
         if (file) {
           // EL ARCHIVO EXISTE, SE AGREGAN LOS NUEVOS PARES
-          file.addPar(msg.body.parIP, msg.body.parPort);
+          file.addPar(msg.body.pares[0].parIP, msg.body.pares[0].parPort);
         } else {
           // EL ARCHIVO NO EXISTE, SE LO AGREGA AL BUCKET
           let file = new File(
             msg.body.id,
             msg.body.filename,
             msg.body.filesize,
-            msg.body.parIP,
-            msg.body.parPort
+            msg.body.pares[0].parIP,
+            msg.body.pares[0].parPort
           );
           matchingFiles.push(file);
         }
@@ -201,14 +209,34 @@ function store(msg) {
           msg.body.id,
           msg.body.filename,
           msg.body.filesize,
-          msg.body.parIP,
-          msg.body.parPort
+          msg.body.pares[0].parIP,
+          msg.body.pares[0].parPort
         );
         files.set(hash, [file]);
       }
-      let file = new File(msg.body.id);
+      console.log("ARCHIVO CON CLAVE " + hash + " ALMACENADO");
+      requestCount();
     }
   }
+}
+
+// PARA PROBAR QUE ANDE EL COUNT, SE SOLICITA UNO AL ALMACENAR UN ARCHIVO
+function requestCount() {
+  let messageId = uuidv4();
+  messages.push(messageId);
+
+  sendUdpMessage(
+    JSON.stringify({
+      messageId,
+      route: COUNT_ROUTE,
+      body: {
+        trackerCount: 1,
+        fileCount: countFiles(),
+      },
+    }),
+    { address: config.rightTrackerAddress, port: config.rightTrackerPort },
+    false
+  );
 }
 
 function search(msg) {
@@ -228,7 +256,10 @@ function search(msg) {
         console.log("Mensaje SEARCH pasado a tracker derecho.");
       });
     } else {
-      if (config.leftTrackerId > bucket) {
+      if (
+        config.leftTrackerId >= hash &&
+        config.leftTrackerId < config.trackerId
+      ) {
         //TO-DO: ENVIAR MENSAJE A TRACKER IZQ
         sendUdpMessage(
           JSON.stringify(msg),
@@ -239,72 +270,40 @@ function search(msg) {
         });
       } else {
         // ARCHIVO ESTA DENTRO DEL DOMINIO
-        matchingFiles = files.get(bucket);
-        file = matchinfFiles.filter((possibleMatch) => {
-          return hash === possibleMatch.id;
-        });
 
-        if (file) {
-          // LO ENCONTRO, ENVIAR FOUND
-          let pairs = file.pairs;
-          msg.body = file;
-          sendUdpMessage(
-            JSON.stringify(msg),
-            {
-              address: config.rightTrackerAddress,
-              port: config.righTrackerPort,
-            },
-            false
-          ).then(() => {
-            console.log("Mensaje FOUND pasado al origen.");
+        if (files.has(bucket)) {
+          let matchingFiles = files.get(bucket);
+          let file = matchingFiles.find((possibleMatch) => {
+            return hash === possibleMatch.id;
           });
+
+          if (file) {
+            // LO ENCONTRO, ENVIAR FOUND
+            msg.body = {
+              id: file.id,
+              trackerIP: config.localAddress,
+              trackerPort: config.localPort,
+              pares: file.pares,
+            };
+            sendUdpMessage(
+              JSON.stringify(msg),
+              {
+                address: msg.originIP,
+                port: msg.originPort,
+              },
+              false
+            ).then(() => {
+              console.log("Mensaje FOUND pasado al origen.");
+            });
+          } else {
+            console.log("EL ARCHIVO NO ESTÁ PRESENTE EN EL SISTEMA");
+          }
         } else {
-          // NO ENCONTRADO
+          console.log("EL ARCHIVO NO ESTÁ PRESENTE EN EL SISTEMA");
         }
       }
     }
   }
-}
-
-function getPair(originMsg) {
-  let route = originMsg.route;
-  let hash = route.split("/file/")[1];
-  let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
-  //si lo encuentra debe devolver un found, sino pasar el mensaje al siguiente tracker.
-  found(originMsg, hash);
-  //else --> search al nodo siguiente...
-}
-
-function found(originMsg, hash) {
-  let pair = ({ filename, filesize, nodePort, nodeIp } = files.get(hash));
-
-  let foundMsg = originMsg;
-  foundMsg.body = {
-    id: hash,
-    trackerIP: "127.0.0.1",
-    trackerPort: portTracker,
-    pares: [
-      {
-        parIP: pair.nodeIp,
-        parPort: pair.nodePort,
-      },
-    ],
-  };
-  destination_IP = originMsg.originIP;
-  destination_port = originMsg.originPort;
-
-  console.log("found response = " + JSON.stringify(foundMsg));
-
-  socket.send(
-    JSON.stringify(foundMsg),
-    destination_port,
-    destination_IP,
-    (err) => {
-      if (err) {
-        console.log(err);
-      }
-    }
-  );
 }
 
 function count(msg) {
@@ -315,14 +314,14 @@ function count(msg) {
     console.log("File count: " + msg.body.fileCount);
   } else {
     msg.body.trackerCount += 1;
-    fileCount = countFiles();
+    let fileCount = countFiles();
     msg.body.fileCount += fileCount;
     // TO-DO: ENVIAR MENSAJE A TRACKER DERECHO
     sendUdpMessage(
       JSON.stringify(msg),
       {
         address: config.rightTrackerAddress,
-        port: config.righTrackerPort,
+        port: config.rightTrackerPort,
       },
       false
     ).then(() => {
