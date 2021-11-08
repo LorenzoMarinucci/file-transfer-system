@@ -75,7 +75,7 @@ footer {
   font-size: medium;
   text-align: center;
   display: block;
-  list-style-type:none;
+  list-style-type: none;
 }
 
 #files-list {
@@ -87,13 +87,27 @@ footer {
 }
 
 #files-list ul {
-  list-style-type:none;
+  list-style-type: none;
+  overflow: hidden;
+  overflow-y: scroll;
+  width: 100%;
+  height: 62vh;
 }
 
 #files-list li {
+  border-radius: 20px;
   box-shadow: 1px lightgray;
-  padding: 2px;
   cursor: pointer;
+  font-size: 16px;
+  padding: 5px;
+}
+
+a:link {
+  color: black;
+}
+
+a:hover {
+  background: white;
 }
 
 #files-list li:hover {
@@ -115,7 +129,7 @@ footer {
 
 #upload-title {
   text-align: center;
-  margin: 10px;
+  margin: 5px;
   font-size: medium;
 }
 
@@ -146,6 +160,12 @@ footer {
 
 #file-input:active::before {
   background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+}
+
+#close {
+  position: absolute;
+  right: 20px;
+  top: 10px;
 }
 
 /*https://css-tricks.com/snippets/css/custom-file-input-styling-webkitblink/*/
