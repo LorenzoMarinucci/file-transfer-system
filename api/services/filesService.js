@@ -88,14 +88,17 @@ function requestFile(hash) {
     sendUdpMessage(JSON.stringify(msg), udpConfig, true)
       .then((val) => {
         let response = JSON.parse(val);
-        console.log(response.body.pares[0]);
-        console.log(response.body.pares[1]);
-        log.info("File obtained.");
-        resolve({
-          id: response.body.id,
-          trackerIP: response.body.trackerIP,
-          trackerPort: response.body.trackerPort,
-        });
+        if (response.body) {
+          log.info("File obtained.");
+          resolve({
+            id: response.body.id,
+            trackerIP: response.body.trackerIP,
+            trackerPort: response.body.trackerPort,
+          });
+        } else {
+          log.info("File not found");
+          resolve();
+        }
       })
       .catch((err) => {
         log.error("Error while obtaining file.");

@@ -64,11 +64,15 @@ app.get("/file/:hash", (req, res) => {
   filesService
     .requestFile(hash)
     .then((node) => {
-      res.set({
-        "Content-Disposition": `attachment; filename="${hash}.torrente"`,
-      });
-      res.status(200);
-      res.end(JSON.stringify(node));
+      if (node) {
+        res.set({
+          "Content-Disposition": `attachment; filename="${hash}.torrente"`,
+        });
+        res.status(200);
+        res.end(JSON.stringify(node));
+      } else {
+        res.status(404).end();
+      }
     })
     .catch((err) => {
       log.error("Fail during file request.");

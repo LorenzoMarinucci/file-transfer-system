@@ -193,14 +193,16 @@ function store(msg) {
           file.addPar(msg.body.pares[0].parIP, msg.body.pares[0].parPort);
         } else {
           // EL ARCHIVO NO EXISTE, SE LO AGREGA AL BUCKET
-          let file = new File(
-            msg.body.id,
-            msg.body.filename,
-            msg.body.filesize,
-            msg.body.pares[0].parIP,
-            msg.body.pares[0].parPort
-          );
-          matchingFiles.push(file);
+          msg.pares.forEach((par) => {
+            let file = new File(
+              msg.body.id,
+              msg.body.filename,
+              msg.body.filesize,
+              par.parIP,
+              par.parPort
+            );
+            matchingFiles.push(file);
+          });
         }
       } else {
         // LOS CARACTERES NO EXISTEN EN LA DHT
@@ -277,6 +279,8 @@ function search(msg) {
             return hash === possibleMatch.id;
           });
 
+          msg.route += "/found";
+
           if (file) {
             // LO ENCONTRO, ENVIAR FOUND
             msg.body = {
@@ -296,10 +300,28 @@ function search(msg) {
               console.log("Mensaje FOUND pasado al origen.");
             });
           } else {
-            console.log("EL ARCHIVO NO ESTÁ PRESENTE EN EL SISTEMA");
+            sendUdpMessage(
+              JSON.stringify(msg),
+              {
+                address: msg.originIP,
+                port: msg.originPort,
+              },
+              false
+            ).then(() => {
+              console.log("Mensaje FOUND vacío pasado al origen.");
+            });
           }
         } else {
-          console.log("EL ARCHIVO NO ESTÁ PRESENTE EN EL SISTEMA");
+          sendUdpMessage(
+            JSON.stringify(msg),
+            {
+              address: msg.originIP,
+              port: msg.originPort,
+            },
+            false
+          ).then(() => {
+            console.log("Mensaje FOUND vacío pasado al origen.");
+          });
         }
       }
     }
