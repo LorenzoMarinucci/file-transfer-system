@@ -21,16 +21,18 @@ function torrenteRequest(filePath, peer_IP, peer_port){
     }
 
     return new Promise((resolve, reject) => {
-        sendUdpMessage(JSON.stringify(msg), networkData)
-          .then((val) => {
-            console.log("Succesful response from tracker.");
-            resolve(JSON.parse(val.toString("utf-8"))); //resuelve mensaje FOUND
-          })
-          .catch((err) => {
-            console.log("Error while requesting peers from tracker.");
-            reject(err);
-          });
-      });
+      sendUdpMessage(JSON.stringify(msg), networkData, true)
+        .then((val) => {
+          console.log("Succesful response from tracker.");
+          console.log("FOUND " + val);
+          resolve(JSON.parse(val.toString("utf-8"))); //resuelve mensaje FOUND
+          //resolve(val);
+        })
+        .catch((err) => {
+          console.log("Error while requesting peers from tracker.");
+          reject(err);
+        });
+    });
 }
 
 module.exports = {

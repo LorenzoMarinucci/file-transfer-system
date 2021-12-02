@@ -47,8 +47,6 @@ inquirer
     .then( (found) => {
       let peerIp = found.body.pares[0].parIP;
       let peerPort = found.body.pares[0].parPort;
-      //let peerIp = "127.0.0.1";
-      //let peerPort = 10004;
       downloader
       .startDownload("example_file3.txt", peerIp, peerPort)
       .catch((err) => {
@@ -56,8 +54,8 @@ inquirer
       });
     })
     .catch((err) => {
-      log.error("Error while requesting tracker.");
-      log.error(err);
+      console.log("Error while requesting tracker.");
+      console.log(err);
     });
   });
 
