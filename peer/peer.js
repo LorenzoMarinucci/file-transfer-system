@@ -47,8 +47,9 @@ inquirer
     .then( (found) => {
       let peerIp = found.body.pares[0].parIP;
       let peerPort = found.body.pares[0].parPort;
+      let filehash = found.body.id;
       downloader
-      .startDownload("example_file3.txt", peerIp, peerPort)
+      .startDownload("example_file3.txt", peerIp, peerPort, filehash)
       .catch((err) => {
         console.log(err);
       });
@@ -69,6 +70,9 @@ let server,
   istream = fs.createReadStream("./files/test.txt");
 
 server = net.createServer((socket) => {
+
+  //el server deberia verificar el hash que le pasan para realizar la transferencia del file correspondiente
+
   // 'connection' listener.
   socket.pipe(process.stdout);
   istream.on("readable", function () {
@@ -94,3 +98,12 @@ server.on("error", (err) => {
 server.listen(config.port, () => {
   console.log("server bound");
 });
+
+/*
+Request para Peer
+
+JSON.stringify({
+    type: “GET FILE”,
+    hash: str
+})
+*/

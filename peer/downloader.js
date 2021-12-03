@@ -2,7 +2,7 @@ let net = require("net");
 let fs = require("fs");
 const FILES_DIR = "./files/";
 
-async function startDownload(filename, peerIp, peerPort) {
+async function startDownload(filename, peerIp, peerPort, filehash) {
   const filePath = FILES_DIR + filename;
 
   await fs.unlink(filePath, (err) => {}); // borra el archivo previo
@@ -11,6 +11,12 @@ async function startDownload(filename, peerIp, peerPort) {
 
   client.connect(peerPort, peerIp, function () {
     console.log("Connected to ", peerIp);
+
+    client.write(JSON.stringify({
+      type: "GET FILE",
+      hash: filehash
+    }));
+    console.log("hash enviado al peer servidor");
   });
 
   let ostream = fs.createWriteStream("./files/testvuelta.txt");
