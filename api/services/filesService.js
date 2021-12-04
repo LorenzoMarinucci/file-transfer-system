@@ -1,14 +1,9 @@
-const { sendUdpMessage } = require("../../middleware/communication");
+const { sendUdpMessage } = require("../communication/udp");
 const { v4: uuidv4 } = require("uuid");
 const log = require("../winston/logger");
 const sha1 = require("sha-1");
 
-const {
-  trackerPort,
-  trackerAddress,
-  udpListeningPort,
-  hostname,
-} = require("../env/config");
+const { trackerPort, trackerAddress, hostname } = require("../env/config");
 
 const SCAN_MSG = "/scan";
 const STORE_MSG = "/file/{hash}/store";
@@ -17,19 +12,17 @@ const SEARCH_FILE_MSG = "/file/{hash}";
 let udpConfig = {
   address: trackerAddress,
   port: trackerPort,
-  localPort: udpListeningPort,
+  hostname: hostname,
 };
 
 function getAllFiles() {
   let msg = {
     messageId: uuidv4(),
     route: SCAN_MSG,
-    originIP: hostname,
-    originPort: udpListeningPort,
   };
 
   return new Promise((resolve, reject) => {
-    sendUdpMessage(JSON.stringify(msg), udpConfig, true)
+    sendUdpMessage(msg, udpConfig)
       .then((val) => {
         log.info("Succesful response from tracker.");
         let msg = JSON.parse(val.toString("utf-8"));
@@ -48,8 +41,6 @@ function saveFile(file) {
   let msg = {
     messageId: uuidv4(),
     route,
-    originIP: hostname,
-    originPort: udpListeningPort,
     body: {
       id: hash,
       filename: file.filename,
@@ -64,7 +55,7 @@ function saveFile(file) {
   };
 
   return new Promise((resolve, reject) => {
-    sendUdpMessage(JSON.stringify(msg), udpConfig, false)
+    sendUdpMessage(msg, udpConfig)
       .then((val) => {
         log.info("File saved.");
         resolve(val);
@@ -81,11 +72,9 @@ function requestFile(hash) {
   let msg = {
     messageId: uuidv4(),
     route,
-    originIP: hostname,
-    originPort: udpListeningPort,
   };
   return new Promise((resolve, reject) => {
-    sendUdpMessage(JSON.stringify(msg), udpConfig, true)
+    sendUdpMessage(msg, udpConfig)
       .then((val) => {
         let response = JSON.parse(val);
         if (response.body) {

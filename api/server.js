@@ -52,7 +52,7 @@ app.post("/file", (req, res) => {
       res.status(200).end();
     })
     .catch((err) => {
-      log.error("Files could not be saved.");
+      log.error("File could not be saved.");
       log.error(err);
       res.status(500).end();
     });

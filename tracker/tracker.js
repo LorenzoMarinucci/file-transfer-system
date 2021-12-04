@@ -1,6 +1,6 @@
 const config = require("./config/config");
 const { v4: uuidv4 } = require("uuid");
-const { sendUdpMessage } = require("../middleware/communication");
+const { sendUdpMessage } = require("./communication/udp");
 
 // EXPRESIONES REGULARES PARA LOS ROUTE
 
@@ -109,16 +109,16 @@ function scan(msg) {
 
   if (messages.includes(msg.messageId)) {
     messages.splice(msg.messageId);
-    sendUdpMessage(
-      JSON.stringify(msg),
-      { address: msg.originIP, port: msg.originPort },
-      false
-    ).then(() => {
+    sendUdpMessage(JSON.stringify(msg), {
+      address: msg.originIP,
+      port: msg.originPort,
+    }).then(() => {
       console.log("SCAN retornado al origen.");
     });
   } else {
     // AÑADIR LA ID DEL MENSAJE COMO LEÍDO
     messages.push(msg.messageId);
+    setTimeout(() => messages.splice(msg.messageId), 2000);
     if (!msg.body) {
       msg.body = {
         files: [],
@@ -137,11 +137,10 @@ function scan(msg) {
       });
     });
 
-    sendUdpMessage(
-      JSON.stringify(msg),
-      { address: config.rightTrackerAddress, port: config.rightTrackerPort },
-      false
-    ).then(() => {
+    sendUdpMessage(JSON.stringify(msg), {
+      address: config.rightTrackerAddress,
+      port: config.rightTrackerPort,
+    }).then(() => {
       console.log("Mensaje SCAN pasado a tracker derecho.");
     });
   }
@@ -150,17 +149,17 @@ function scan(msg) {
 function store(msg) {
   // NO SE VERIFICA ID, YA QUE MINIMAMENTE ALGUN NODO GUARDARA EL ARCHIVO
   messages.push(msg.messageId);
+  setTimeout(() => messages.splice(msg.messageId), 2000);
 
   let hash = msg.body.id.substring(0, 2);
 
   if (hash > config.trackerId) {
     // EL ID NO ES MAYOR AL HASH QUE SE QUIERE ALMACENAR, PASA EL MENSAJE AL TRACKER DERECHO, QUE POSEE MAYOR ID
     // TO-DO: reenviar mensaje al tracker derecho
-    sendUdpMessage(
-      JSON.stringify(msg),
-      { address: config.rightTrackerAddress, port: config.rightTrackerPort },
-      false
-    ).then(() => {
+    sendUdpMessage(JSON.stringify(msg), {
+      address: config.rightTrackerAddress,
+      port: config.rightTrackerPort,
+    }).then(() => {
       console.log("Mensaje STORE pasado a tracker derecho.");
     });
   } else {
@@ -171,11 +170,10 @@ function store(msg) {
       // EL ID ES MAYOR AL HASH, PERO NO ES EL MENOR DE LOS MAYORES.
       // TAMBIEN SE VERIFICA QUE EL ID IZQ NO SEA MAYOR AL ACTUAL (EN DICHO CASO, EL IZQ SERÍA EL ÚLTIMO)
       // PASA EL MENSAJE AL TRACKER IZQ
-      sendUdpMessage(
-        JSON.stringify(msg),
-        { address: config.leftTrackerAddress, port: config.leftTrackerPort },
-        false
-      ).then(() => {
+      sendUdpMessage(JSON.stringify(msg), {
+        address: config.leftTrackerAddress,
+        port: config.leftTrackerPort,
+      }).then(() => {
         console.log("Mensaje STORE pasado a tracker izquierdo.");
       });
     } else {
@@ -226,7 +224,7 @@ function store(msg) {
 function requestCount() {
   let messageId = uuidv4();
   messages.push(messageId);
-
+  setTimeout(() => messages.splice(messageId), 2000);
   sendUdpMessage(
     JSON.stringify({
       messageId,
@@ -236,8 +234,7 @@ function requestCount() {
         fileCount: countFiles(),
       },
     }),
-    { address: config.rightTrackerAddress, port: config.rightTrackerPort },
-    false
+    { address: config.rightTrackerAddress, port: config.rightTrackerPort }
   );
 }
 
@@ -246,15 +243,16 @@ function search(msg) {
     messages.splice(msg.messageId);
     // EL MENSAJE DIO TODA LA VUELTA
   } else {
+    messages.push(msg.messageId);
+    setTimeout(() => messages.splice(msg.messageId), 2000);
     let hash = msg.route.split("/file/")[1];
     let bucket = hash.substring(0, 2);
     if (bucket > config.trackerId) {
       //TO-DO: ENVIAR MENSAJE A TRACKER DERECHO
-      sendUdpMessage(
-        JSON.stringify(msg),
-        { address: config.rightTrackerAddress, port: config.rightTrackerPort },
-        false
-      ).then(() => {
+      sendUdpMessage(JSON.stringify(msg), {
+        address: config.rightTrackerAddress,
+        port: config.rightTrackerPort,
+      }).then(() => {
         console.log("Mensaje SEARCH pasado a tracker derecho.");
       });
     } else {
@@ -263,11 +261,10 @@ function search(msg) {
         config.leftTrackerId < config.trackerId
       ) {
         //TO-DO: ENVIAR MENSAJE A TRACKER IZQ
-        sendUdpMessage(
-          JSON.stringify(msg),
-          { address: config.leftTrackerAddress, port: config.leftTrackerPort },
-          false
-        ).then(() => {
+        sendUdpMessage(JSON.stringify(msg), {
+          address: config.leftTrackerAddress,
+          port: config.leftTrackerPort,
+        }).then(() => {
           console.log("Mensaje SEARCH pasado a tracker izquierdo.");
         });
       } else {
@@ -289,37 +286,25 @@ function search(msg) {
               trackerPort: config.localPort,
               pares: file.pares,
             };
-            sendUdpMessage(
-              JSON.stringify(msg),
-              {
-                address: msg.originIP,
-                port: msg.originPort,
-              },
-              false
-            ).then(() => {
+            sendUdpMessage(JSON.stringify(msg), {
+              address: msg.originIP,
+              port: msg.originPort,
+            }).then(() => {
               console.log("Mensaje FOUND pasado al origen.");
             });
           } else {
-            sendUdpMessage(
-              JSON.stringify(msg),
-              {
-                address: msg.originIP,
-                port: msg.originPort,
-              },
-              false
-            ).then(() => {
+            sendUdpMessage(JSON.stringify(msg), {
+              address: msg.originIP,
+              port: msg.originPort,
+            }).then(() => {
               console.log("Mensaje FOUND vacío pasado al origen.");
             });
           }
         } else {
-          sendUdpMessage(
-            JSON.stringify(msg),
-            {
-              address: msg.originIP,
-              port: msg.originPort,
-            },
-            false
-          ).then(() => {
+          sendUdpMessage(JSON.stringify(msg), {
+            address: msg.originIP,
+            port: msg.originPort,
+          }).then(() => {
             console.log("Mensaje FOUND vacío pasado al origen.");
           });
         }
@@ -335,18 +320,16 @@ function count(msg) {
     console.log("Tracker count: " + msg.body.trackerCount);
     console.log("File count: " + msg.body.fileCount);
   } else {
+    messages.push(msg.messageId);
+    setTimeout(() => messages.splice(msg.messageId), 2000);
     msg.body.trackerCount += 1;
     let fileCount = countFiles();
     msg.body.fileCount += fileCount;
     // TO-DO: ENVIAR MENSAJE A TRACKER DERECHO
-    sendUdpMessage(
-      JSON.stringify(msg),
-      {
-        address: config.rightTrackerAddress,
-        port: config.rightTrackerPort,
-      },
-      false
-    ).then(() => {
+    sendUdpMessage(JSON.stringify(msg), {
+      address: config.rightTrackerAddress,
+      port: config.rightTrackerPort,
+    }).then(() => {
       console.log("Mensaje COUNT pasado a tracker derecho.");
     });
   }
