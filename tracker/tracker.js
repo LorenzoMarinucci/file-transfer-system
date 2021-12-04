@@ -1,6 +1,7 @@
 const config = require("./config/config");
 const { v4: uuidv4 } = require("uuid");
 const { sendUdpMessage } = require("./communication/udp");
+const sha1 = require("sha-1");
 
 // EXPRESIONES REGULARES PARA LOS ROUTE
 
@@ -8,6 +9,7 @@ const SCAN_REGEX = /^\/scan$/; //  /scan
 const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/; //  /file/{hash}/store
 const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/; //  /file/{hash}
 const COUNT_REGEX = /^\/count$/; //  /count
+const ADD_PAR_REGEX = /^\/file\/[a-z0-9]+\/addPar$/; // /file/{hash}/addPar
 
 const COUNT_ROUTE = "/count";
 
@@ -15,6 +17,7 @@ const COUNT_ROUTE = "/count";
 
 const dgram = require("dgram"); //conexiones UDP
 const { type } = require("os");
+const { match } = require("assert");
 const socket = dgram.createSocket("udp4"); //socket para UDP
 socket.bind({
   port: config.localPort,
@@ -99,6 +102,10 @@ socket.on("message", (msg, rinfo) => {
     }
     case COUNT_REGEX.test(route): {
       count(parsedMsg);
+      break;
+    }
+    case ADD_PAR_REGEX.test(route): {
+      addPar(parsedMsg);
       break;
     }
   }
@@ -188,30 +195,40 @@ function store(msg) {
 
         if (file) {
           // EL ARCHIVO EXISTE, SE AGREGAN LOS NUEVOS PARES
-          file.addPar(msg.body.pares[0].parIP, msg.body.pares[0].parPort);
+          msg.body.pares.forEach((par) => {
+            file.addPar(par.parIP, par.parPort);
+          });
         } else {
           // EL ARCHIVO NO EXISTE, SE LO AGREGA AL BUCKET
-          msg.pares.forEach((par) => {
-            let file = new File(
-              msg.body.id,
-              msg.body.filename,
-              msg.body.filesize,
-              par.parIP,
-              par.parPort
-            );
-            matchingFiles.push(file);
+          let primerPar = msg.body.pares[0];
+          let paresRestantes = msg.body.pares.slice(1);
+          let file = new File(
+            msg.body.id,
+            msg.body.filename,
+            msg.body.filesize,
+            primerPar.parIP,
+            primerPar.parPort
+          );
+          matchingFiles.push(file);
+          paresRestantes.forEach((par) => {
+            file.addPar(par.parIP, par.parPort);
           });
         }
       } else {
         // LOS CARACTERES NO EXISTEN EN LA DHT
         // CREA EL ARRAY CORRESPONDIENTE A LOS CARACTERES E INSERTA EL NUEVO ARCHIVO
+        let primerPar = msg.body.pares[0];
+        let paresRestantes = msg.body.pares.slice(1);
         let file = new File(
           msg.body.id,
           msg.body.filename,
           msg.body.filesize,
-          msg.body.pares[0].parIP,
-          msg.body.pares[0].parPort
+          primerPar.parIP,
+          primerPar.parPort
         );
+        paresRestantes.forEach((par) => {
+          file.addPar(par.parIP, par.parPort);
+        });
         files.set(hash, [file]);
       }
       console.log("ARCHIVO CON CLAVE " + hash + " ALMACENADO");
@@ -344,4 +361,46 @@ function countFiles() {
   });
 
   return count;
+}
+
+function addPar(msg) {
+  messages.push(msg.messageId);
+  setTimeout(() => messages.splice(msg.messageId), 2000);
+  let hash = sha1(id);
+  let bucket = hash.substring(0, 2);
+
+  let status;
+
+  if (files.has(bucket)) {
+    let matchingFiles = files.get(bucket);
+    let file = matchingFiles.find((match) => {
+      return hash === match.id;
+    });
+
+    let respuesta;
+
+    if (file) {
+      files.addPar(msg.parIP, msg.parPort);
+      console.log("PAR AÑADIDO AL ARCHIVO.");
+      status = true;
+    } else {
+      console.log("ARCHIVO NO ENCONTRADO.");
+      status = false;
+    }
+  } else {
+    status = false;
+  }
+
+  respuesta = {
+    messageId: msg.messageId,
+    route: msg.route,
+    status,
+  };
+
+  sendUdpMessage(JSON.stringify(msg), {
+    address: msg.originIP,
+    port: msg.originPort,
+  }).then(() => {
+    console.log("Respuesta de ADD PAR enviada al par.");
+  });
 }
