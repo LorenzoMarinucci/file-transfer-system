@@ -26,7 +26,8 @@ function CustomAlert() {
     ) {
       window.alert("Debe ingresar IP y Puerto válidos");
     } else {
-      uploadFile(buildFileDataObject());
+      const file = buildFileDataObject();
+      uploadFile(file);
       closeUpload();
     }
   };
