@@ -180,7 +180,8 @@ function scan(msg) {
   // ANALIZAR SI EL MENSAJE YA FUE RECIBIDO
 
   if (messages.includes(msg.messageId)) {
-    messages.splice(msg.messageId);
+    let index = messages.indexOf(msg.messageId);
+    messages.splice(index, 1);
     sendUdpMessage(JSON.stringify(msg), {
       address: msg.originIP,
       port: msg.originPort,
@@ -190,7 +191,12 @@ function scan(msg) {
   } else {
     // AÑADIR LA ID DEL MENSAJE COMO LEÍDO
     messages.push(msg.messageId);
-    setTimeout(() => messages.splice(msg.messageId), 2000);
+    setTimeout(() => {
+      if (messages.includes(msg.messageId)) {
+        let index = messages.indexOf(msg.messageId);
+        messages.splice(index, 1);
+      }
+    }, 2000);
     if (!msg.body) {
       msg.body = {
         files: [],
@@ -221,7 +227,12 @@ function scan(msg) {
 function store(msg) {
   // NO SE VERIFICA ID, YA QUE MINIMAMENTE ALGUN NODO GUARDARA EL ARCHIVO
   messages.push(msg.messageId);
-  setTimeout(() => messages.splice(msg.messageId), 2000);
+  setTimeout(() => {
+    if (messages.includes(msg.messageId)) {
+      let index = messages.indexOf(msg.messageId);
+      messages.splice(index, 1);
+    }
+  }, 2000);
 
   let hash = msg.body.id.substring(0, 2);
 
@@ -306,7 +317,12 @@ function store(msg) {
 function requestCount() {
   let messageId = uuidv4();
   messages.push(messageId);
-  setTimeout(() => messages.splice(messageId), 2000);
+  setTimeout(() => {
+    if (messages.includes(msg.messageId)) {
+      let index = messages.indexOf(msg.messageId);
+      messages.splice(index, 1);
+    }
+  }, 2000);
   sendUdpMessage(
     JSON.stringify({
       messageId,
@@ -326,7 +342,12 @@ function search(msg) {
     // EL MENSAJE DIO TODA LA VUELTA
   } else {
     messages.push(msg.messageId);
-    setTimeout(() => messages.splice(msg.messageId), 2000);
+    setTimeout(() => {
+      if (messages.includes(msg.messageId)) {
+        let index = messages.indexOf(msg.messageId);
+        messages.splice(index, 1);
+      }
+    }, 2000);
     let hash = msg.route.split("/file/")[1];
     let bucket = hash.substring(0, 2);
     if (bucket > config.trackerId) {
@@ -395,13 +416,19 @@ function search(msg) {
 
 function count(msg) {
   if (messages.includes(msg.messageId)) {
-    messages.splice(msg.messageId);
+    let index = messages.indexOf(msg.messageId);
+    messages.splice(index, 1);
     // EL MENSAJE VUELVE AL ORIGEN Y CORTA
     console.log("Tracker count: " + msg.body.trackerCount);
     console.log("File count: " + msg.body.fileCount);
   } else {
     messages.push(msg.messageId);
-    setTimeout(() => messages.splice(msg.messageId), 2000);
+    setTimeout(() => {
+      if (messages.includes(msg.messageId)) {
+        let index = messages.indexOf(msg.messageId);
+        messages.splice(index, 1);
+      }
+    }, 2000);
     msg.body.trackerCount += 1;
     let fileCount = countFiles();
     msg.body.fileCount += fileCount;
@@ -428,7 +455,12 @@ function countFiles() {
 
 function addPar(msg) {
   messages.push(msg.messageId);
-  setTimeout(() => messages.splice(msg.messageId), 2000);
+  setTimeout(() => {
+    if (messages.includes(msg.messageId)) {
+      let index = messages.indexOf(msg.messageId);
+      messages.splice(index, 1);
+    }
+  }, 2000);
   let hash = sha1(id);
   let bucket = hash.substring(0, 2);
 
@@ -544,7 +576,12 @@ setInterval(() => {
 
 function receiveHeartbeat(msg) {
   messages.push(msg.messageId);
-  setTimeout(() => messages.splice(msg.messageId), 2000);
+  setTimeout(() => {
+    if (messages.includes(msg.messageId)) {
+      let index = messages.indexOf(msg.messageId);
+      messages.splice(index, 1);
+    }
+  }, 2000);
   if (msg.body.trackerId === config.leftTrackerId) {
     console.log("Hearbeat recibido de tracker " + msg.body.trackerId);
     missingHeartbeat = 0;
@@ -558,7 +595,8 @@ function receiveHeartbeat(msg) {
 function handleNodeMissing(msg) {
   if (messages.includes(msg.messageId)) {
     // ES LA RESPUESTA EL NODE MISSING
-    messages.splice(msg.messageId);
+    let index = messages.indexOf(msg.messageId);
+    messages.splice(index, 1);
     config.leftTrackerId = msg.body.leftNodeId;
     config.leftTrackerAddress = msg.body.leftNodeIp;
     config.leftTrackerPort = msg.body.leftNodePort;
@@ -668,7 +706,12 @@ function receiveLeave(msg) {
     console.log("LEAVE ya recibido previamente.");
   } else {
     messages.push(msg.messageId);
-    setTimeout(() => messages.splice(msg.messageId), 2000);
+    setTimeout(() => {
+      if (messages.includes(msg.messageId)) {
+        let index = messages.indexOf(msg.messageId);
+        messages.splice(index, 1);
+      }
+    }, 2000);
     if (msg.body.trackerId === config.leftTrackerId) {
       config.leftTrackerId = msg.body.newNodeId;
       config.leftTrackerAddress = msg.body.newNodeIp;
