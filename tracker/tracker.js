@@ -742,9 +742,15 @@ function handleJoin(msg) {
       let messageIndex = messages.indexOf(msg.messageId);
       messages.splice(messageIndex, 1);
 
-      let newId = (
-        msg.body.score + Number.parseInt("0x" + msg.body.leftNodeId)
-      ).toString(16);
+      let newId;
+
+      if (!msg.body.firstNode) {
+        newId = (
+          msg.body.score + Number.parseInt("0x" + msg.body.leftNodeId)
+        ).toString(16);
+      } else {
+        newId = msg.body.score.toString(16);
+      }
 
       let response = {
         messageId: msg.messageId,
@@ -829,33 +835,73 @@ function handleJoin(msg) {
     }, 5000);
 
     let score;
+    let firstNode = config.trackerId < config.leftTrackerId;
 
-    if (files.size === 0) {
-      let h =
-        Number.parseInt("0x" + config.trackerId) -
-        Number.parseInt("0x" + config.leftTrackerId);
-      score = Math.floor(h / 2);
-    } else {
-      let keys = files.keys();
-      let min = keys[0];
-      keys.slice(1).forEach((key) => {
-        if (key < min) {
-          min = key;
-        }
-      });
+    if (firstNode) {
+      // PRIMER NODO
 
-      let h =
-        Number.parseInt("0x" + min) -
-        Number.parseInt("0x" + config.leftTrackerId);
+      let lastTrackerScore =
+        0xff - Number.parseInt("0x" + config.leftTrackerId);
 
-      let trackerDistance =
-        Number.parseInt("0x" + config.trackerId) -
-        Number.parseInt("0x" + config.leftTrackerId);
+      let firstTrackerScore;
 
-      if (h < Math.floor(trackerDistance / 2)) {
-        score = h;
+      if (files.size === 0) {
+        let h = Number.parseInt("0x" + config.trackerId);
+        firstTrackerScore = Math.floor(h / 2);
       } else {
-        score = Math.floor(trackerDistance / 2);
+        let keys = files.keys();
+        let min = keys[0];
+        keys.slice(1).forEach((key) => {
+          if (key < min) {
+            min = key;
+          }
+        });
+
+        let h = Number.parseInt("0x" + min);
+
+        let trackerDistance = Number.parseInt("0x" + config.trackerId);
+
+        if (h < Math.floor(trackerDistance / 2)) {
+          firstTrackerScore = h;
+        } else {
+          firstTrackerScore = Math.floor(trackerDistance / 2);
+        }
+      }
+
+      if (lastTrackerScore > firstTrackerScore) {
+        score = lastTrackerScore;
+        firstNode = false;
+      } else {
+        score = firstTrackerScore;
+      }
+    } else {
+      if (files.size === 0) {
+        let h =
+          Number.parseInt("0x" + config.trackerId) -
+          Number.parseInt("0x" + config.leftTrackerId);
+        score = Math.floor(h / 2);
+      } else {
+        let keys = files.keys();
+        let min = keys[0];
+        keys.slice(1).forEach((key) => {
+          if (key < min) {
+            min = key;
+          }
+        });
+
+        let h =
+          Number.parseInt("0x" + min) -
+          Number.parseInt("0x" + config.leftTrackerId);
+
+        let trackerDistance =
+          Number.parseInt("0x" + config.trackerId) -
+          Number.parseInt("0x" + config.leftTrackerId);
+
+        if (h < Math.floor(trackerDistance / 2)) {
+          score = h;
+        } else {
+          score = Math.floor(trackerDistance / 2);
+        }
       }
     }
 
@@ -870,8 +916,7 @@ function handleJoin(msg) {
       msg.body.rightNodeAddress = config.localAddress;
       msg.body.rightNodePort = config.localPort;
 
-      console.log("LLEGA ##################################");
-      console.log(JSON.stringify(msg));
+      msg.body.firstNode = firstNode;
     }
 
     sendUdpMessage(JSON.stringify(msg), {
