@@ -12,10 +12,12 @@ const COUNT_REGEX = /^\/count$/; //  /count
 const ADD_PAR_REGEX = /^\/file\/[a-z0-9]+\/addPar$/; // /file/{hash}/addPar
 const HEARTBEAT_REGEX = /^\/heartbeat$/; // /heartbeat
 const NODE_MISSING_REGEX = /^\/nodeMissing$/; // /heartbeat
+const LEAVE_REGEX = /^\/leave$/; //  /leave
 
 const COUNT_ROUTE = "/count";
 const HEARTBEAT_ROUTE = "/heartbeat";
 const NODE_MISSING_ROUTE = "/nodeMissing";
+const LEAVE_ROUTE = "/leave";
 
 // CONEXIÓN UDP
 
@@ -38,6 +40,24 @@ const files = new Map();
 const messages = [];
 
 let missingHeartbeat = 0;
+
+// LEAVE
+
+if (process.argv[2] === "-l" && process.argv[3] != null) {
+  let leaveTime = Number.parseInt(process.argv[3]);
+  if (leaveTime <= 0) {
+    console.log("Ingrese un tiempo de vida del tracker válido.");
+  } else {
+    setTimeout(() => {
+      leaveToRight();
+      leaveToLeft();
+    }, leaveTime);
+  }
+} else {
+  console.log(
+    "Si quiere agregar parametros adicionales debe ingresarlos correctamente."
+  );
+}
 
 // ARCHIVOS
 
@@ -100,6 +120,10 @@ socket.on("message", (msg, rinfo) => {
     }
     case NODE_MISSING_REGEX.test(route): {
       handleNodeMissing(parsedMsg);
+      break;
+    }
+    case LEAVE_REGEX.test(route): {
+      receiveLeave(parsedMsg);
       break;
     }
   }
@@ -544,4 +568,74 @@ function handleNodeMissing(msg) {
         });
     }
   }
+}
+
+function leaveToRight() {
+  const msg = {
+    messageId: uuidv4(),
+    route: LEAVE_ROUTE,
+    body: {
+      trackerId: config.trackerId,
+      leftNodeIp: config.leftTrackerAddress,
+      leftNodePort: config.leftTrackerPort,
+      leftNodeId: config.leftTrackerId,
+    },
+  };
+  sendUdpMessage(JSON.stringify(msg), {
+    address: config.rightTrackerAddress,
+    port: config.rightTrackerPort,
+  })
+    .then(() => {
+      console.log("Mensaje LEAVE enviado a tracker derecho");
+    })
+    .catch((err) => {
+      console.log("Error al enviar mensaje LEAVE a tracker derecho");
+    });
+}
+
+function leaveToLeft() {
+  const msg = {
+    messageId: uuidv4(),
+    route: LEAVE_ROUTE,
+    body: {
+      trackerId: config.trackerId,
+      rightNodeIp: config.rightTrackerAddress,
+      rightNodePort: config.rightTrackerPort,
+      rightNodeId: config.rightTrackerId,
+    },
+  };
+  sendUdpMessage(JSON.stringify(msg), {
+    address: config.leftTrackerAddress,
+    port: config.leftTrackerPort,
+  })
+    .then(() => {
+      console.log("Mensaje LEAVE enviado a tracker izquierdo");
+    })
+    .catch((err) => {
+      console.log("Error al enviar mensaje LEAVE a tracker izquierdo");
+    });
+}
+
+function receiveLeave(msg) {
+  if (msg.body.leftNodeId != null) {
+    receiveLeaveToRight(msg);
+  } else if (msg.body.rightNodeId != null) {
+    receiveLeaveToLeft(msg);
+  } else {
+    console.log("LEAVE recibido, pero no se puede reconfigurar.");
+  }
+}
+
+function receiveLeaveToRight(msg) {
+  config.leftTrackerId = msg.body.leftNodeId;
+  config.leftTrackerAddress = msg.body.leftNodeIp;
+  config.leftTrackerPort = msg.body.leftNodePort;
+  console.log("LEAVE recibido. Nueva configuración: " + JSON.stringify(config));
+}
+
+function receiveLeaveToLeft(msg) {
+  config.rightTrackerId = msg.body.rightNodeId;
+  config.rightTrackerAddress = msg.body.rightNodeIp;
+  config.rightTrackerPort = msg.body.rightNodePort;
+  console.log("LEAVE recibido. Nueva configuración: " + JSON.stringify(config));
 }
