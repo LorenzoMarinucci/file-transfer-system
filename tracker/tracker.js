@@ -13,11 +13,15 @@ const ADD_PAR_REGEX = /^\/file\/[a-z0-9]+\/addPar$/; // /file/{hash}/addPar
 const HEARTBEAT_REGEX = /^\/heartbeat$/; // /heartbeat
 const NODE_MISSING_REGEX = /^\/nodeMissing$/; // /heartbeat
 const LEAVE_REGEX = /^\/leave$/; //  /leave
+const JOIN_REGEX = /^\/join$/; //  /join
+const JOIN_CONFIG_REGEX = /^\/join\/config$/; //  /join/config
 
 const COUNT_ROUTE = "/count";
 const HEARTBEAT_ROUTE = "/heartbeat";
 const NODE_MISSING_ROUTE = "/nodeMissing";
 const LEAVE_ROUTE = "/leave";
+const JOIN_ROUTE = "/join";
+const JOIN_CONFIG_ROUTE = "/join/config";
 
 // CONEXIÓN UDP
 
@@ -55,6 +59,38 @@ if (process.argv.includes("-l")) {
         leaveToLeft();
       }, leaveTime);
     }
+  } else {
+    console.log(
+      "Si quiere agregar parametros adicionales debe ingresarlos correctamente."
+    );
+  }
+}
+
+if (process.argv.includes("-j")) {
+  let index = process.argv.indexOf("-j");
+  let address = process.argv[index + 1];
+  let port = Number.parseInt(process.argv[index + 2]);
+
+  let messageId = uuidv4();
+
+  messages.push(messageId);
+
+  let msg = {
+    messageId,
+    route: JOIN_ROUTE,
+    body: {
+      newNodeIp: config.localAddress,
+      newNodePort: config.localPort,
+    },
+  };
+
+  if (address && port) {
+    sendUdpMessage(JSON.stringify(msg), {
+      address,
+      port,
+    }).then(() => {
+      console.log("Pedido de JOIN enviado.");
+    });
   } else {
     console.log(
       "Si quiere agregar parametros adicionales debe ingresarlos correctamente."
@@ -127,6 +163,14 @@ socket.on("message", (msg, rinfo) => {
     }
     case LEAVE_REGEX.test(route): {
       receiveLeave(parsedMsg);
+      break;
+    }
+    case JOIN_REGEX.test(route): {
+      handleJoin(parsedMsg);
+      break;
+    }
+    case JOIN_CONFIG_REGEX.test(route): {
+      joinConfig(parsedMsg);
       break;
     }
   }
@@ -629,14 +673,186 @@ function receiveLeave(msg) {
       config.leftTrackerId = msg.body.newNodeId;
       config.leftTrackerAddress = msg.body.newNodeIp;
       config.leftTrackerPort = msg.body.newNodePort;
-      console.log("LEAVE recibido. Nueva configuración: " + JSON.stringify(config));
+      console.log(
+        "LEAVE recibido. Nueva configuración: " + JSON.stringify(config)
+      );
     } else if (msg.body.trackerId === config.rightTrackerId) {
       config.rightTrackerId = msg.body.newNodeId;
       config.rightTrackerAddress = msg.body.newNodeIp;
       config.rightTrackerPort = msg.body.newNodePort;
-      console.log("LEAVE recibido. Nueva configuración: " + JSON.stringify(config));
+      console.log(
+        "LEAVE recibido. Nueva configuración: " + JSON.stringify(config)
+      );
     } else {
       console.log("LEAVE recibido, pero no se puede reconfigurar.");
     }
+  }
+}
+
+function handleJoin(msg) {
+  console.log("Mensaje JOIN recibido.");
+
+  if (messages.includes(msg.messageId)) {
+    console.log("LLEGA ##################################");
+    if (config.trackerId) {
+      // EL TRACKER YA TIENE ID CONFIGURADA Y VIO EL MENSAJE. ES EL NODO CON EL CUAL SE COMUNICO.
+
+      let messageIndex = messages.indexOf(msg.messageId);
+      messages.splice(messageIndex, 1);
+
+      let newId = (
+        msg.body.score + Number.parseInt("0x" + msg.body.leftTrackerId)
+      ).toString(16);
+
+      let response = {
+        messageId: msg.messageId,
+        route: msg.route,
+        body: {
+          newNodeId: newId,
+          rightNodeId: msg.body.rightNodeId,
+          rightNodeAddress: msg.body.rightNodeAddress,
+          rightNodePort: msg.body.rightNodePort,
+          leftNodeId: msg.body.leftNoderId,
+          leftNodeAddress: msg.body.leftNodeAddress,
+          leftNodePort: msg.body.leftNodePort,
+        },
+      };
+
+      sendUdpMessage(JSON.stringify(response), {
+        address: msg.body.newNodeIp,
+        port: msg.body.newNodePort,
+      }).then(() => {
+        console.log("Mensaje JOIN devuelto a nuevo tracker.");
+      });
+
+      response = {
+        messageId: msg.messageId,
+        route: JOIN_CONFIG_ROUTE,
+        body: {
+          rightTrackerId: newId,
+          rightTrackerAddress: msg.body.newNodeIp,
+          rightTrackerPort: msg.body.newNodePort,
+        },
+      };
+
+      sendUdpMessage(JSON.stringify(response), {
+        address: msg.body.leftNodeAddress,
+        port: msg.body.leftNodePort,
+      }).then(() => {
+        console.log("Mensaje JOIN CONFIG enviado a tracker izquierdo.");
+      });
+
+      response = {
+        messageId: msg.messageId,
+        route: JOIN_CONFIG_ROUTE,
+        body: {
+          leftNodeId: newId,
+          leftNodeAddress: msg.body.newNodeIp,
+          leftNodePort: msg.body.newNodePort,
+        },
+      };
+
+      sendUdpMessage(JSON.stringify(response), {
+        address: msg.body.rightNodeAddress,
+        port: msg.body.rightNodePort,
+      }).then(() => {
+        console.log("Mensaje JOIN CONFIG enviado a tracker derecho.");
+      });
+    } else {
+      // EL NODO RECIBE SUS PARAMETROS DE CONFIGURACION
+
+      let index = messages.indexOf(msg.messageId);
+      messages.splice(index, 1);
+
+      config.trackerId = msg.body.newNodeId;
+
+      config.rightTrackerAddress = msg.body.rightNodeAddress;
+      config.rightTrackerId = msg.body.rightNodeId;
+      config.rightTrackerPort = msg.body.rightNodePort;
+
+      config.leftTrackerId = msg.body.leftNodeId;
+      config.leftTrackerPort = msg.body.leftNodePort;
+      config.leftTrackerAddress = msg.body.leftNodeAddress;
+
+      console.log("Configuracion realizada: " + JSON.stringify(config));
+    }
+  } else {
+    // BUSCAR TAMAÑO MAXIMO
+    messages.push(msg.messageId);
+    setTimeout(() => {
+      if (messages.includes(msg.messageId)) {
+        let index = messages.indexOf(msg.messageId);
+        messages.splice(index, 1);
+      }
+    }, 5000);
+
+    let score;
+
+    if (files.size === 0) {
+      let h =
+        Number.parseInt("0x" + config.trackerId) -
+        Number.parseInt("0x" + config.leftTrackerId);
+      score = Math.floor(h / 2);
+    } else {
+      let keys = files.keys();
+      let min = keys[0];
+      keys.slice(1).forEach((key) => {
+        if (key < min) {
+          min = key;
+        }
+      });
+
+      let h =
+        Number.parseInt("0x" + min) -
+        Number.parseInt("0x" + config.leftTrackerId);
+
+      let trackerDistance =
+        Number.parseInt("0x" + config.trackerId) -
+        Number.parseInt("0x" + config.leftTrackerId);
+
+      if (h < Math.floor(trackerDistance / 2)) {
+        score = h;
+      } else {
+        score = Math.floor(trackerDistance / 2);
+      }
+    }
+
+    if (msg.body.score || score > msg.body.score) {
+      msg.body.score = score;
+
+      msg.body.leftNodeAddress = config.leftTrackerAddress;
+      msg.body.leftNodeId = config.leftTrackerId;
+      msg.body.leftNodePort = config.leftTrackerPort;
+
+      msg.body.rightNodeId = config.trackerId;
+      msg.body.rightNodeAddress = config.localAddress;
+      msg.body.rightNodePort = config.localPort;
+    }
+
+    sendUdpMessage(JSON.stringify(msg), {
+      address: config.rightTrackerAddress,
+      port: config.rightTrackerPort,
+    }).then(() => {
+      console.log("Mensaje JOIN enviado a tracker derecho.");
+    });
+  }
+}
+
+function joinConfig(msg) {
+  messages.push(msg.messageId);
+  setTimeout(() => {
+    messages.splice(msg.messageId), 2000;
+  });
+
+  if (msg.body.leftNodeId) {
+    config.leftTrackerId = msg.body.leftNodeId;
+    config.leftTrackerAddress = msg.body.leftTrackerAddress;
+    config.leftTrackerPort = msg.body.leftTrackerPort;
+  } else if (msg.body.rightNodeId) {
+    config.rightTrackerId = msg.body.rightNodeId;
+    config.rightTrackerAddress = msg.body.rightTrackerAddress;
+    config.rightTrackerPort = msg.body.rightTrackerPort;
+  } else {
+    console.log("JOIN CONFIG erroneo recibido.");
   }
 }
