@@ -693,7 +693,6 @@ function handleJoin(msg) {
   console.log("Mensaje JOIN recibido.");
 
   if (messages.includes(msg.messageId)) {
-    console.log("LLEGA ##################################");
     if (config.trackerId) {
       // EL TRACKER YA TIENE ID CONFIGURADA Y VIO EL MENSAJE. ES EL NODO CON EL CUAL SE COMUNICO.
 
@@ -701,7 +700,7 @@ function handleJoin(msg) {
       messages.splice(messageIndex, 1);
 
       let newId = (
-        msg.body.score + Number.parseInt("0x" + msg.body.leftTrackerId)
+        msg.body.score + Number.parseInt("0x" + msg.body.leftNodeId)
       ).toString(16);
 
       let response = {
@@ -712,7 +711,7 @@ function handleJoin(msg) {
           rightNodeId: msg.body.rightNodeId,
           rightNodeAddress: msg.body.rightNodeAddress,
           rightNodePort: msg.body.rightNodePort,
-          leftNodeId: msg.body.leftNoderId,
+          leftNodeId: msg.body.leftNodeId,
           leftNodeAddress: msg.body.leftNodeAddress,
           leftNodePort: msg.body.leftNodePort,
         },
@@ -729,9 +728,9 @@ function handleJoin(msg) {
         messageId: msg.messageId,
         route: JOIN_CONFIG_ROUTE,
         body: {
-          rightTrackerId: newId,
-          rightTrackerAddress: msg.body.newNodeIp,
-          rightTrackerPort: msg.body.newNodePort,
+          rightNodeId: newId,
+          rightNodeAddress: msg.body.newNodeIp,
+          rightNodePort: msg.body.newNodePort,
         },
       };
 
@@ -817,7 +816,7 @@ function handleJoin(msg) {
       }
     }
 
-    if (msg.body.score || score > msg.body.score) {
+    if (!msg.body.score || score > msg.body.score) {
       msg.body.score = score;
 
       msg.body.leftNodeAddress = config.leftTrackerAddress;
@@ -827,6 +826,9 @@ function handleJoin(msg) {
       msg.body.rightNodeId = config.trackerId;
       msg.body.rightNodeAddress = config.localAddress;
       msg.body.rightNodePort = config.localPort;
+
+      console.log("LLEGA ##################################");
+      console.log(JSON.stringify(msg));
     }
 
     sendUdpMessage(JSON.stringify(msg), {
@@ -841,17 +843,26 @@ function handleJoin(msg) {
 function joinConfig(msg) {
   messages.push(msg.messageId);
   setTimeout(() => {
-    messages.splice(msg.messageId), 2000;
-  });
+    if (messages.includes(msg.messageId)) {
+      let index = messages.indexOf(msg.messageId);
+      messages.splice(index, 1);
+    }
+  }, 2000);
 
   if (msg.body.leftNodeId) {
     config.leftTrackerId = msg.body.leftNodeId;
-    config.leftTrackerAddress = msg.body.leftTrackerAddress;
-    config.leftTrackerPort = msg.body.leftTrackerPort;
+    config.leftTrackerAddress = msg.body.leftNodeAddress;
+    config.leftTrackerPort = msg.body.leftNodePort;
+    console.log(
+      "JOIN CONFIG realizado. Configuracion: " + JSON.stringify(config)
+    );
   } else if (msg.body.rightNodeId) {
     config.rightTrackerId = msg.body.rightNodeId;
-    config.rightTrackerAddress = msg.body.rightTrackerAddress;
-    config.rightTrackerPort = msg.body.rightTrackerPort;
+    config.rightTrackerAddress = msg.body.rightNodeAddress;
+    config.rightTrackerPort = msg.body.rightNodePort;
+    console.log(
+      "JOIN CONFIG realizado. Configuracion: " + JSON.stringify(config)
+    );
   } else {
     console.log("JOIN CONFIG erroneo recibido.");
   }
