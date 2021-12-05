@@ -11,9 +11,11 @@ const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/; //  /file/{hash}
 const COUNT_REGEX = /^\/count$/; //  /count
 const ADD_PAR_REGEX = /^\/file\/[a-z0-9]+\/addPar$/; // /file/{hash}/addPar
 const HEARTBEAT_REGEX = /^\/heartbeat$/; // /heartbeat
+const NODE_MISSING_REGEX = /^\/nodeMissing$/; // /heartbeat
 
 const COUNT_ROUTE = "/count";
 const HEARTBEAT_ROUTE = "/heartbeat";
+const NODE_MISSING_ROUTE = "/nodeMissing";
 
 // CONEXIÓN UDP
 
@@ -94,6 +96,10 @@ socket.on("message", (msg, rinfo) => {
     }
     case HEARTBEAT_REGEX.test(route): {
       receiveHeartbeat(parsedMsg);
+      break;
+    }
+    case NODE_MISSING_REGEX.test(route): {
+      handleNodeMissing(parsedMsg);
       break;
     }
   }
@@ -430,7 +436,37 @@ setInterval(() => {
         config.leftTrackerId +
         " perdido. Enviando mensaje NODE MISSING a tracker derecho."
     );
-    //node missing
+
+    // NODE MISSING
+
+    let messageId = uuidv4();
+    messages.push(messageId);
+
+    let msg = {
+      messageId,
+      route: NODE_MISSING_ROUTE,
+      originIP: config.localAddress,
+      originPort: config.localPort,
+      body: {
+        missingNodeId: config.leftTrackerId,
+        rightNodeIp: config.localAddress,
+        rightNodePort: config.localPort,
+        rightNodeId: config.trackerId,
+      },
+    };
+
+    sendUdpMessage(JSON.stringify(msg), {
+      address: config.rightTrackerAddress,
+      port: config.rightTrackerPort,
+    })
+      .then(() => {
+        console.log("Mensaje NODE MISSING enviado a tracker derecho.");
+      })
+      .catch((err) => {
+        console.log("Error al enviar mensaje NODE MISSING a tracker derecho.");
+        console.log(err);
+      });
+
     missingHeartbeat = 0;
   }
 }, 15000);
@@ -445,5 +481,67 @@ function receiveHeartbeat(msg) {
     console.log(
       "Heartbeat recibido de tracker desconocido. ID: " + msg.body.trackerId
     );
+  }
+}
+
+function handleNodeMissing(msg) {
+  if (messages.includes(msg.messageId)) {
+    // ES LA RESPUESTA EL NODE MISSING
+    messages.splice(msg.messageId);
+    config.leftTrackerId = msg.body.leftNodeId;
+    config.leftTrackerAddress = msg.body.leftNodeIp;
+    config.leftTrackerPort = msg.body.leftNodePort;
+    console.log(
+      "Respuesta a NODE MISSING recibida. Nueva configuración: " +
+        JSON.stringify(config)
+    );
+  } else {
+    if (msg.body.missingNodeId === config.rightTrackerId) {
+      // RECIBE EL MENSAJE EL TACKER A IZQ DEL CAÍDO
+      console.log(
+        "Mensaje NODE MISSING recibido desde tracker " + msg.body.rightTrackerId
+      );
+      config.rightTrackerId = msg.body.rightNodeId;
+      config.rightTrackerAddress = msg.body.rightNodeIp;
+      config.rightTrackerPort = msg.body.rightNodePort;
+
+      let response = {
+        messageId: msg.messageId,
+        route: msg.route,
+        body: {
+          leftNodeId: config.trackerId,
+          leftNodeIp: config.localAddress,
+          leftNodePort: config.localPort,
+        },
+      };
+
+      sendUdpMessage(JSON.stringify(response), {
+        address: config.rightTrackerAddress,
+        port: config.rightTrackerPort,
+      })
+        .then(() => {
+          console.log(
+            "Respuesta a NODE MISSING enviada. Nueva configuración: " +
+              JSON.stringify(config)
+          );
+        })
+        .catch((err) => {
+          console.log("Error al enviar respuesta a mensaje NODE MISSING.");
+          console.log(err);
+        });
+    } else {
+      console.log("Mensaje NODE MISSING con destino a otro tracker recibido.");
+      sendUdpMessage(JSON.stringify(msg), {
+        address: config.rightTrackerAddress,
+        port: config.rightTrackerPort,
+      })
+        .then(() => {
+          console.log("Mensaje NODE MISSING pasado a tracker derecho.");
+        })
+        .catch((err) => {
+          console.log("Error al pasar mensaje NODE MISSING.");
+          console.log(err);
+        });
+    }
   }
 }
