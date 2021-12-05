@@ -10,14 +10,17 @@ const STORE_REGEX = /^\/file\/[a-z0-9]+\/store$/; //  /file/{hash}/store
 const FILE_REQUEST_REGEX = /^\/file\/[a-z0-9]+$/; //  /file/{hash}
 const COUNT_REGEX = /^\/count$/; //  /count
 const ADD_PAR_REGEX = /^\/file\/[a-z0-9]+\/addPar$/; // /file/{hash}/addPar
+const HEARTBEAT_REGEX = /^\/heartbeat$/; // /heartbeat
 
 const COUNT_ROUTE = "/count";
+const HEARTBEAT_ROUTE = "/heartbeat";
 
 // CONEXIÓN UDP
 
 const dgram = require("dgram"); //conexiones UDP
 const { type } = require("os");
 const { match } = require("assert");
+const { generateKeyPair } = require("crypto");
 const socket = dgram.createSocket("udp4"); //socket para UDP
 socket.bind({
   port: config.localPort,
@@ -32,7 +35,9 @@ const files = new Map();
 
 const messages = [];
 
-// ARCIVOS
+let missingHeartbeat = 0;
+
+// ARCHIVOS
 
 class File {
   constructor(id, filename, filesize, parIP, parPort) {
@@ -49,27 +54,6 @@ class File {
     }
   }
 }
-
-/* files.set("hash1", {
-  filename: "example_file1",
-  filesize: 21,
-  nodePort: 1,
-  nodeIp: "128.0.0.1",
-});
-
-files.set("hash2", {
-  filename: "example_file2",
-  filesize: 21,
-  nodePort: 2,
-  nodeIp: "128.0.0.2",
-});
-
-files.set("hash3", {
-  filename: "example_file3",
-  filesize: 21,
-  nodePort: 10003,
-  nodeIp: "127.0.0.1",
-}); */
 
 socket.on("listening", () => {
   let addr = socket.address();
@@ -106,6 +90,10 @@ socket.on("message", (msg, rinfo) => {
     }
     case ADD_PAR_REGEX.test(route): {
       addPar(parsedMsg);
+      break;
+    }
+    case HEARTBEAT_REGEX.test(route): {
+      receiveHeartbeat(parsedMsg);
       break;
     }
   }
@@ -265,7 +253,6 @@ function search(msg) {
     let hash = msg.route.split("/file/")[1];
     let bucket = hash.substring(0, 2);
     if (bucket > config.trackerId) {
-      //TO-DO: ENVIAR MENSAJE A TRACKER DERECHO
       sendUdpMessage(JSON.stringify(msg), {
         address: config.rightTrackerAddress,
         port: config.rightTrackerPort,
@@ -277,7 +264,6 @@ function search(msg) {
         config.leftTrackerId >= hash &&
         config.leftTrackerId < config.trackerId
       ) {
-        //TO-DO: ENVIAR MENSAJE A TRACKER IZQ
         sendUdpMessage(JSON.stringify(msg), {
           address: config.leftTrackerAddress,
           port: config.leftTrackerPort,
@@ -403,4 +389,58 @@ function addPar(msg) {
   }).then(() => {
     console.log("Respuesta de ADD PAR enviada al par.");
   });
+}
+
+// ENVÍO DEL HB
+
+function sendHeartbeat() {
+  const msg = {
+    route: HEARTBEAT_ROUTE,
+    trackerId: config.trackerId,
+  };
+  sendUdpMessage(JSON.stringify(msg), {
+    address: config.rightTrackerAddress,
+    port: config.rightTrackerPort,
+  })
+    .then(() => {
+      console.log("Heartbeat enviado a tracker derecho.");
+    })
+    .catch((err) => {
+      console.log("Error al enviar Heartbeat al tracker derecho");
+      console.log(err);
+    });
+}
+
+// INTERVALO PARA EL ENVÍO DEL HB
+
+setInterval(() => {
+  sendHeartbeat();
+}, 10000);
+
+// INTERVALO PARA EL AUMENTO DEL CONTADOR
+
+setInterval(() => {
+  missingHeartbeat += 1;
+  console.log(missingHeartbeat);
+  if (missingHeartbeat === 3) {
+    console.log(
+      "Tracker " +
+        config.leftTrackerId +
+        " perdido. Enviando mensaje NODE MISSING a tracker derecho."
+    );
+    //node missing
+    missingHeartbeat = 0;
+  }
+}, 15000);
+
+function receiveHeartbeat(msg) {
+  console.log(missingHeartbeat);
+  if (msg.trackerId === config.leftTrackerId) {
+    console.log("Hearbeat recibido de tracker " + msg.trackerId);
+    missingHeartbeat = 0;
+  } else {
+    console.log(
+      "Heartbeat recibido de tracker desconocido. ID: " + msg.trackerId
+    );
+  }
 }
