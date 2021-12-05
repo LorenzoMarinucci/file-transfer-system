@@ -395,8 +395,11 @@ function addPar(msg) {
 
 function sendHeartbeat() {
   const msg = {
+    messageId: uuidv4(),
     route: HEARTBEAT_ROUTE,
-    trackerId: config.trackerId,
+    body: {
+      trackerId: config.trackerId,
+    },
   };
   sendUdpMessage(JSON.stringify(msg), {
     address: config.rightTrackerAddress,
@@ -421,7 +424,6 @@ setInterval(() => {
 
 setInterval(() => {
   missingHeartbeat += 1;
-  console.log(missingHeartbeat);
   if (missingHeartbeat === 3) {
     console.log(
       "Tracker " +
@@ -434,13 +436,14 @@ setInterval(() => {
 }, 15000);
 
 function receiveHeartbeat(msg) {
-  console.log(missingHeartbeat);
-  if (msg.trackerId === config.leftTrackerId) {
-    console.log("Hearbeat recibido de tracker " + msg.trackerId);
+  messages.push(msg.messageId);
+  setTimeout(() => messages.splice(msg.messageId), 2000);
+  if (msg.body.trackerId === config.leftTrackerId) {
+    console.log("Hearbeat recibido de tracker " + msg.body.trackerId);
     missingHeartbeat = 0;
   } else {
     console.log(
-      "Heartbeat recibido de tracker desconocido. ID: " + msg.trackerId
+      "Heartbeat recibido de tracker desconocido. ID: " + msg.body.trackerId
     );
   }
 }
