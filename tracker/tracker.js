@@ -43,20 +43,23 @@ let missingHeartbeat = 0;
 
 // LEAVE
 
-if (process.argv[2] === "-l" && process.argv[3] != null) {
-  let leaveTime = Number.parseInt(process.argv[3]);
-  if (leaveTime <= 0) {
-    console.log("Ingrese un tiempo de vida del tracker válido.");
+if (process.argv.includes("-l")) {
+  let index = process.argv.indexOf("-l");
+  let leaveTime = Number.parseInt(process.argv[index + 1]);
+  if (leaveTime) {
+    if (leaveTime <= 0) {
+      console.log("Ingrese un tiempo de vida del tracker válido.");
+    } else {
+      setTimeout(() => {
+        leaveToRight();
+        leaveToLeft();
+      }, leaveTime);
+    }
   } else {
-    setTimeout(() => {
-      leaveToRight();
-      leaveToLeft();
-    }, leaveTime);
+    console.log(
+      "Si quiere agregar parametros adicionales debe ingresarlos correctamente."
+    );
   }
-} else {
-  console.log(
-    "Si quiere agregar parametros adicionales debe ingresarlos correctamente."
-  );
 }
 
 // ARCHIVOS
