@@ -617,6 +617,8 @@ function leaveToLeft() {
 }
 
 function receiveLeave(msg) {
+  messages.push(msg.messageId);
+  setTimeout(() => messages.splice(msg.messageId), 2000);
   if (msg.body.leftNodeId != null) {
     receiveLeaveToRight(msg);
   } else if (msg.body.rightNodeId != null) {
