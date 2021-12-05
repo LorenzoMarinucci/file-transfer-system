@@ -499,7 +499,7 @@ function handleNodeMissing(msg) {
     if (msg.body.missingNodeId === config.rightTrackerId) {
       // RECIBE EL MENSAJE EL TACKER A IZQ DEL CAÍDO
       console.log(
-        "Mensaje NODE MISSING recibido desde tracker " + msg.body.rightTrackerId
+        "Mensaje NODE MISSING recibido desde tracker " + msg.body.rightNodeId
       );
       config.rightTrackerId = msg.body.rightNodeId;
       config.rightTrackerAddress = msg.body.rightNodeIp;
