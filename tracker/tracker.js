@@ -579,9 +579,9 @@ function leaveToRight() {
     route: LEAVE_ROUTE,
     body: {
       trackerId: config.trackerId,
-      leftNodeIp: config.leftTrackerAddress,
-      leftNodePort: config.leftTrackerPort,
-      leftNodeId: config.leftTrackerId,
+      newNodeIp: config.leftTrackerAddress,
+      newNodePort: config.leftTrackerPort,
+      newNodeId: config.leftTrackerId,
     },
   };
   sendUdpMessage(JSON.stringify(msg), {
@@ -602,9 +602,9 @@ function leaveToLeft() {
     route: LEAVE_ROUTE,
     body: {
       trackerId: config.trackerId,
-      rightNodeIp: config.rightTrackerAddress,
-      rightNodePort: config.rightTrackerPort,
-      rightNodeId: config.rightTrackerId,
+      newNodeIp: config.rightTrackerAddress,
+      newNodePort: config.rightTrackerPort,
+      newNodeId: config.rightTrackerId,
     },
   };
   sendUdpMessage(JSON.stringify(msg), {
@@ -625,26 +625,18 @@ function receiveLeave(msg) {
   } else {
     messages.push(msg.messageId);
     setTimeout(() => messages.splice(msg.messageId), 2000);
-    if (msg.body.leftNodeId != null) {
-      receiveLeaveToRight(msg);
-    } else if (msg.body.rightNodeId != null) {
-      receiveLeaveToLeft(msg);
+    if (msg.body.trackerId === config.leftTrackerId) {
+      config.leftTrackerId = msg.body.newNodeId;
+      config.leftTrackerAddress = msg.body.newNodeIp;
+      config.leftTrackerPort = msg.body.newNodePort;
+      console.log("LEAVE recibido. Nueva configuración: " + JSON.stringify(config));
+    } else if (msg.body.trackerId === config.rightTrackerId) {
+      config.rightTrackerId = msg.body.newNodeId;
+      config.rightTrackerAddress = msg.body.newNodeIp;
+      config.rightTrackerPort = msg.body.newNodePort;
+      console.log("LEAVE recibido. Nueva configuración: " + JSON.stringify(config));
     } else {
       console.log("LEAVE recibido, pero no se puede reconfigurar.");
     }
   }
-}
-
-function receiveLeaveToRight(msg) {
-  config.leftTrackerId = msg.body.leftNodeId;
-  config.leftTrackerAddress = msg.body.leftNodeIp;
-  config.leftTrackerPort = msg.body.leftNodePort;
-  console.log("LEAVE recibido. Nueva configuración: " + JSON.stringify(config));
-}
-
-function receiveLeaveToLeft(msg) {
-  config.rightTrackerId = msg.body.rightNodeId;
-  config.rightTrackerAddress = msg.body.rightNodeIp;
-  config.rightTrackerPort = msg.body.rightNodePort;
-  console.log("LEAVE recibido. Nueva configuración: " + JSON.stringify(config));
 }
