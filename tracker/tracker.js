@@ -37,7 +37,8 @@ socket.bind({
 
 // DHT
 
-const files = new Map();
+let files = new Map();
+let backupFiles;
 
 // MENSAJES
 
@@ -508,6 +509,7 @@ function sendHeartbeat() {
     route: HEARTBEAT_ROUTE,
     body: {
       trackerId: config.trackerId,
+      files: Object.fromEntries(files)
     },
   };
   sendUdpMessage(JSON.stringify(msg), {
@@ -539,7 +541,10 @@ setInterval(() => {
         config.leftTrackerId +
         " perdido. Enviando mensaje NODE MISSING a tracker derecho."
     );
-
+    
+    files = new Map(files,Object.entries(backupFiles));
+    console.log("Backup de archivos reestablecido.");
+    
     // NODE MISSING
 
     let messageId = uuidv4();
@@ -583,6 +588,7 @@ function receiveHeartbeat(msg) {
     }
   }, 2000);
   if (msg.body.trackerId === config.leftTrackerId) {
+    backupFiles = msg.body.files;
     console.log("Hearbeat recibido de tracker " + msg.body.trackerId);
     missingHeartbeat = 0;
   } else {
@@ -719,6 +725,8 @@ function receiveLeave(msg) {
       console.log(
         "LEAVE recibido. Nueva configuración: " + JSON.stringify(config)
       );
+      files = new Map(files,Object.entries(backupFiles));
+      console.log("Backup de archivos reestablecido.");
     } else if (msg.body.trackerId === config.rightTrackerId) {
       config.rightTrackerId = msg.body.newNodeId;
       config.rightTrackerAddress = msg.body.newNodeIp;
