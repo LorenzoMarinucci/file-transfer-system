@@ -31,7 +31,6 @@ function sendUdpMessage(msg, { address, port, hostname }) {
     setTimeout(() => {
       try {
         socketUDP.close();
-        console.log("timeout");
         reject("Socket timed out.");
       } catch (e) {}
     }, 3000);

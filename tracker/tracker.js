@@ -226,57 +226,78 @@ function scan(msg) {
 }
 
 function store(msg) {
-  // NO SE VERIFICA ID, YA QUE MINIMAMENTE ALGUN NODO GUARDARA EL ARCHIVO
-  messages.push(msg.messageId);
-  setTimeout(() => {
-    if (messages.includes(msg.messageId)) {
-      let index = messages.indexOf(msg.messageId);
-      messages.splice(index, 1);
-    }
-  }, 2000);
-
-  let hash = msg.body.id.substring(0, 2);
-
-  if (hash > config.trackerId) {
-    // EL ID NO ES MAYOR AL HASH QUE SE QUIERE ALMACENAR, PASA EL MENSAJE AL TRACKER DERECHO, QUE POSEE MAYOR ID
-    // TO-DO: reenviar mensaje al tracker derecho
-    sendUdpMessage(JSON.stringify(msg), {
-      address: config.rightTrackerAddress,
-      port: config.rightTrackerPort,
-    }).then(() => {
-      console.log("Mensaje STORE pasado a tracker derecho.");
-    });
+  if (messages.includes(msg.messageId)) {
+    console.log(
+      "No puede almacenarse el archivo. No hay trackers que cubran el dominio requerido."
+    );
   } else {
-    if (
-      config.leftTrackerId >= hash &&
-      config.leftTrackerId < config.trackerId
-    ) {
-      // EL ID ES MAYOR AL HASH, PERO NO ES EL MENOR DE LOS MAYORES.
-      // TAMBIEN SE VERIFICA QUE EL ID IZQ NO SEA MAYOR AL ACTUAL (EN DICHO CASO, EL IZQ SERÍA EL ÚLTIMO)
-      // PASA EL MENSAJE AL TRACKER IZQ
+    messages.push(msg.messageId);
+    setTimeout(() => {
+      if (messages.includes(msg.messageId)) {
+        let index = messages.indexOf(msg.messageId);
+        messages.splice(index, 1);
+      }
+    }, 2000);
+
+    let hash = msg.body.id.substring(0, 2);
+
+    if (hash > config.trackerId) {
+      // EL ID NO ES MAYOR AL HASH QUE SE QUIERE ALMACENAR, PASA EL MENSAJE AL TRACKER DERECHO, QUE POSEE MAYOR ID
+      // TO-DO: reenviar mensaje al tracker derecho
       sendUdpMessage(JSON.stringify(msg), {
-        address: config.leftTrackerAddress,
-        port: config.leftTrackerPort,
+        address: config.rightTrackerAddress,
+        port: config.rightTrackerPort,
       }).then(() => {
-        console.log("Mensaje STORE pasado a tracker izquierdo.");
+        console.log("Mensaje STORE pasado a tracker derecho.");
       });
     } else {
-      // EL HASH ESTÁ DENTRO DEL DOMINIO DEL TRACKER
-      if (files.has(hash)) {
-        // SE REVISA SI LOS 2 CARACTERES DEL HASH YA PERTENECEN A LA DHT
-        let matchingFiles = files.get(hash);
-        let file = matchingFiles.find((possibleFile) => {
-          // BUSCA SI EL ARCHIVO YA EXISTE EN LA DHT. LOS IDS DEBEN SER IGUALES
-          return possibleFile.id === msg.body.id;
+      if (
+        config.leftTrackerId >= hash &&
+        config.leftTrackerId < config.trackerId
+      ) {
+        // EL ID ES MAYOR AL HASH, PERO NO ES EL MENOR DE LOS MAYORES.
+        // TAMBIEN SE VERIFICA QUE EL ID IZQ NO SEA MAYOR AL ACTUAL (EN DICHO CASO, EL IZQ SERÍA EL ÚLTIMO)
+        // PASA EL MENSAJE AL TRACKER IZQ
+        sendUdpMessage(JSON.stringify(msg), {
+          address: config.leftTrackerAddress,
+          port: config.leftTrackerPort,
+        }).then(() => {
+          console.log("Mensaje STORE pasado a tracker izquierdo.");
         });
-
-        if (file) {
-          // EL ARCHIVO EXISTE, SE AGREGAN LOS NUEVOS PARES
-          msg.body.pares.forEach((par) => {
-            file.addPar(par.parIP, par.parPort);
+      } else {
+        // EL HASH ESTÁ DENTRO DEL DOMINIO DEL TRACKER
+        if (files.has(hash)) {
+          // SE REVISA SI LOS 2 CARACTERES DEL HASH YA PERTENECEN A LA DHT
+          let matchingFiles = files.get(hash);
+          let file = matchingFiles.find((possibleFile) => {
+            // BUSCA SI EL ARCHIVO YA EXISTE EN LA DHT. LOS IDS DEBEN SER IGUALES
+            return possibleFile.id === msg.body.id;
           });
+
+          if (file) {
+            // EL ARCHIVO EXISTE, SE AGREGAN LOS NUEVOS PARES
+            msg.body.pares.forEach((par) => {
+              file.addPar(par.parIP, par.parPort);
+            });
+          } else {
+            // EL ARCHIVO NO EXISTE, SE LO AGREGA AL BUCKET
+            let primerPar = msg.body.pares[0];
+            let paresRestantes = msg.body.pares.slice(1);
+            let file = new File(
+              msg.body.id,
+              msg.body.filename,
+              msg.body.filesize,
+              primerPar.parIP,
+              primerPar.parPort
+            );
+            matchingFiles.push(file);
+            paresRestantes.forEach((par) => {
+              file.addPar(par.parIP, par.parPort);
+            });
+          }
         } else {
-          // EL ARCHIVO NO EXISTE, SE LO AGREGA AL BUCKET
+          // LOS CARACTERES NO EXISTEN EN LA DHT
+          // CREA EL ARRAY CORRESPONDIENTE A LOS CARACTERES E INSERTA EL NUEVO ARCHIVO
           let primerPar = msg.body.pares[0];
           let paresRestantes = msg.body.pares.slice(1);
           let file = new File(
@@ -286,30 +307,14 @@ function store(msg) {
             primerPar.parIP,
             primerPar.parPort
           );
-          matchingFiles.push(file);
           paresRestantes.forEach((par) => {
             file.addPar(par.parIP, par.parPort);
           });
+          files.set(hash, [file]);
         }
-      } else {
-        // LOS CARACTERES NO EXISTEN EN LA DHT
-        // CREA EL ARRAY CORRESPONDIENTE A LOS CARACTERES E INSERTA EL NUEVO ARCHIVO
-        let primerPar = msg.body.pares[0];
-        let paresRestantes = msg.body.pares.slice(1);
-        let file = new File(
-          msg.body.id,
-          msg.body.filename,
-          msg.body.filesize,
-          primerPar.parIP,
-          primerPar.parPort
-        );
-        paresRestantes.forEach((par) => {
-          file.addPar(par.parIP, par.parPort);
-        });
-        files.set(hash, [file]);
+        console.log("ARCHIVO CON CLAVE " + hash + " ALMACENADO");
+        requestCount();
       }
-      console.log("ARCHIVO CON CLAVE " + hash + " ALMACENADO");
-      requestCount();
     }
   }
 }
@@ -542,7 +547,9 @@ setInterval(() => {
         " perdido. Enviando mensaje NODE MISSING a tracker derecho."
     );
 
-    files = new Map(files, Object.entries(backupFiles));
+    let backupMap = new Map(Object.entries(backupFiles));
+
+    files = new Map([...files, ...backupMap]);
     console.log("Backup de archivos reestablecido.");
 
     // NODE MISSING
@@ -725,7 +732,9 @@ function receiveLeave(msg) {
       console.log(
         "LEAVE recibido. Nueva configuración: " + JSON.stringify(config)
       );
-      files = new Map(files, Object.entries(backupFiles));
+      let backupMap = new Map(Object.entries(backupFiles));
+
+      files = new Map([...files, ...backupMap]);
       console.log("Backup de archivos reestablecido.");
     } else if (msg.body.trackerId === config.rightTrackerId) {
       config.rightTrackerId = msg.body.newNodeId;
