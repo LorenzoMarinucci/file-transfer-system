@@ -1,7 +1,6 @@
 const config = require("./config/config");
 const { v4: uuidv4 } = require("uuid");
 const { sendUdpMessage } = require("./communication/udp");
-const sha1 = require("sha-1");
 
 // EXPRESIONES REGULARES PARA LOS ROUTE
 
@@ -482,7 +481,8 @@ function addPar(msg) {
       messages.splice(index, 1);
     }
   }, 2000);
-  let hash = sha1(id);
+
+  let hash = msg.route.split("/")[2];
   let bucket = hash.substring(0, 2);
 
   let status;
@@ -496,7 +496,7 @@ function addPar(msg) {
     let respuesta;
 
     if (file) {
-      files.addPar(msg.parIP, msg.parPort);
+      file.addPar(msg.parIP, msg.parPort);
       console.log("PAR AÑADIDO AL ARCHIVO.");
       status = true;
     } else {
@@ -513,9 +513,9 @@ function addPar(msg) {
     status,
   };
 
-  sendUdpMessage(JSON.stringify(msg), {
-    address: msg.originIP,
-    port: msg.originPort,
+  sendUdpMessage(JSON.stringify(respuesta), {
+    address: msg.parIP,
+    port: msg.parPort,
   }).then(() => {
     console.log("Respuesta de ADD PAR enviada al par.");
   });

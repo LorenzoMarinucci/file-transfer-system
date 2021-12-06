@@ -1,4 +1,5 @@
-const { sendUdpMessage } = require("../middleware/communication");
+const { sendUdpMessage } = require("../communication/communication");
+const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
 
 function torrenteRequest(filePath, peer_IP, peer_port){
@@ -7,7 +8,7 @@ function torrenteRequest(filePath, peer_IP, peer_port){
 
     //arma mensaje SEARCH
     let msg = {
-        messageId: 'id-random',
+        messageId: uuidv4(),
         route: /file/ + file.id,
         originIP: peer_IP,
         originPort: peer_port,
