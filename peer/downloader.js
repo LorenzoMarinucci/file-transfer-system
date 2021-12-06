@@ -10,23 +10,24 @@ async function startDownload(filename, peerIp, peerPort, filehash) {
   let client = new net.Socket();
 
   client.connect(peerPort, peerIp, function () {
-    console.log("Connected to ", peerIp);
+    console.log("Connected to ", peerIp + ":" + peerPort);
 
     client.write(JSON.stringify({
       type: "GET FILE",
       hash: filehash
     }));
-    console.log("hash enviado al peer servidor");
   });
 
-  let ostream = fs.createWriteStream("./files/testvuelta.txt");
+  let ostream = fs.createWriteStream("./files/" + filename);
   let date = new Date(),
     size = 0,
     elapsed;
 
   client.on("data", (chunk) => {
+    
     size += chunk.length;
     elapsed = new Date() - date;
+    /*
     client.write(
       `\r${(size / (1024 * 1024)).toFixed(
         2
@@ -37,28 +38,25 @@ async function startDownload(filename, peerIp, peerPort, filehash) {
         2
       )} MB of data was sent. Total elapsed time is ${elapsed / 1000} s`
     );
+    */
     ostream.write(chunk);
   });
   client.on("end", () => {
     console.log(
-      `\nFinished getting file. speed was: ${(
+      `\nFinished getting file ${filename}. speed was: ${(
         size /
         (1024 * 1024) /
         (elapsed / 1000)
       ).toFixed(2)} MB/s`
     );
-    process.exit();
+    //process.exit();
   });
 
-  /* client.on("data", function (data) {
-    console.log("Received: " + data);
-    //client.destroy();
-    fs.appendFile(filePath, data, (err, data) => {
-      if (err) throw err;
-      console.log("escribe");
-    });
-  });
+  client.on("error", function(){ //al destruirse el socket desde el server, se ejecuta este evento
+    //
+  })
 
+  /* 
   client.on("close", function () {
     console.log("Connection closed");
   }); */

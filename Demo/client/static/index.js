@@ -57,7 +57,7 @@ function buildFileDataObject() {
     .innerHTML.replace("Tamaño: ", "")
     .replace(" bytes", "");
   const nodeIp = document.getElementById("ip-input").value;
-  const nodePort = document.getElementById("port-input").value;
+  const nodePort = Number.parseInt(document.getElementById("port-input").value);
   return { filename, filesize, nodePort, nodeIp };
 }
 

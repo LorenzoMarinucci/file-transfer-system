@@ -1,4 +1,5 @@
-const { sendUdpMessage } = require("../middleware/communication");
+const { sendUdpMessage } = require("../communication/communication");
+const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
 
 function torrenteRequest(filePath, peer_IP, peer_port){
@@ -7,7 +8,7 @@ function torrenteRequest(filePath, peer_IP, peer_port){
 
     //arma mensaje SEARCH
     let msg = {
-        messageId: 'id-random', //como armamos el id?
+        messageId: uuidv4(),
         route: /file/ + file.id,
         originIP: peer_IP,
         originPort: peer_port,
@@ -23,8 +24,8 @@ function torrenteRequest(filePath, peer_IP, peer_port){
     return new Promise((resolve, reject) => {
       sendUdpMessage(JSON.stringify(msg), networkData, true)
         .then((val) => {
-          console.log("Succesful response from tracker.");
-          console.log("FOUND " + val);
+          //console.log("Succesful response from tracker.");
+          //console.log("FOUND " + val);
           resolve(JSON.parse(val.toString("utf-8"))); //resuelve mensaje FOUND
           //resolve(val);
         })
