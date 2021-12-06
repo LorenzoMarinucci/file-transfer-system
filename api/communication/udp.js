@@ -1,6 +1,6 @@
 const dgram = require("dgram");
 
-function sendUdpMessage(msg, { address, port, hostname }) {
+function sendUdpMessage(msg, { address, port, hostname }, waitResponse) {
   return new Promise((resolve, reject) => {
     const socketUDP = dgram.createSocket("udp4");
 
@@ -13,17 +13,16 @@ function sendUdpMessage(msg, { address, port, hostname }) {
           socketUDP.close();
           reject(err);
         }
+        if (!waitResponse) {
+          socketUDP.close();
+          resolve("Mensaje enviado exitosamente.");
+        }
       });
     });
 
     socketUDP.on("message", (msg, rinfo) => {
       socketUDP.close();
       resolve(msg);
-    });
-
-    socketUDP.on("timeout", () => {
-      socketUDP.close();
-      reject("Socket timed out.");
     });
 
     socketUDP.bind({ address: hostname });
