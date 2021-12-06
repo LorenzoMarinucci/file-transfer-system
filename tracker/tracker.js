@@ -15,6 +15,7 @@ const NODE_MISSING_REGEX = /^\/nodeMissing$/; // /heartbeat
 const LEAVE_REGEX = /^\/leave$/; //  /leave
 const JOIN_REGEX = /^\/join$/; //  /join
 const JOIN_CONFIG_REGEX = /^\/join\/config$/; //  /join/config
+const RESTORE_BACKUP_REGEX = /^\/restoreBackup$/; //  /restoreBackup
 
 const COUNT_ROUTE = "/count";
 const HEARTBEAT_ROUTE = "/heartbeat";
@@ -22,13 +23,11 @@ const NODE_MISSING_ROUTE = "/nodeMissing";
 const LEAVE_ROUTE = "/leave";
 const JOIN_ROUTE = "/join";
 const JOIN_CONFIG_ROUTE = "/join/config";
+const RESTORE_BACKUP_ROUTE = "/restoreBackup";
 
 // CONEXIÓN UDP
 
 const dgram = require("dgram"); //conexiones UDP
-const { type } = require("os");
-const { match } = require("assert");
-const { generateKeyPair } = require("crypto");
 const socket = dgram.createSocket("udp4"); //socket para UDP
 socket.bind({
   port: config.localPort,
@@ -38,7 +37,8 @@ socket.bind({
 // DHT
 
 let files = new Map();
-let backupFiles;
+let backupFiles = {};
+let firstNodeBackup = false;
 
 // MENSAJES
 
@@ -172,6 +172,10 @@ socket.on("message", (msg, rinfo) => {
     }
     case JOIN_CONFIG_REGEX.test(route): {
       joinConfig(parsedMsg);
+      break;
+    }
+    case RESTORE_BACKUP_REGEX.test(route): {
+      restoreBackup(parsedMsg);
       break;
     }
   }
@@ -344,8 +348,8 @@ function requestCount() {
 
 function search(msg) {
   if (messages.includes(msg.messageId)) {
-    messages.splice(msg.messageId);
     // EL MENSAJE DIO TODA LA VUELTA
+    messages.splice(msg.messageId);
   } else {
     messages.push(msg.messageId);
     setTimeout(() => {
@@ -356,13 +360,19 @@ function search(msg) {
     }, 2000);
     let hash = msg.route.split("/file/")[1];
     let bucket = hash.substring(0, 2);
+
     if (bucket > config.trackerId) {
-      sendUdpMessage(JSON.stringify(msg), {
-        address: config.rightTrackerAddress,
-        port: config.rightTrackerPort,
-      }).then(() => {
-        console.log("Mensaje SEARCH pasado a tracker derecho.");
-      });
+      if (firstNodeBackup && bucket > config.leftTrackerId) {
+        //EL PRIMER NODO ACTÚA COMO BACKUP DE UN NODO FINAL CAÍDO.
+        searchFileInDHT(bucket, hash, msg);
+      } else {
+        sendUdpMessage(JSON.stringify(msg), {
+          address: config.rightTrackerAddress,
+          port: config.rightTrackerPort,
+        }).then(() => {
+          console.log("Mensaje SEARCH pasado a tracker derecho.");
+        });
+      }
     } else {
       if (
         config.leftTrackerId >= hash &&
@@ -376,47 +386,50 @@ function search(msg) {
         });
       } else {
         // ARCHIVO ESTA DENTRO DEL DOMINIO
-
-        if (files.has(bucket)) {
-          let matchingFiles = files.get(bucket);
-          let file = matchingFiles.find((possibleMatch) => {
-            return hash === possibleMatch.id;
-          });
-
-          msg.route += "/found";
-
-          if (file) {
-            // LO ENCONTRO, ENVIAR FOUND
-            msg.body = {
-              id: file.id,
-              trackerIP: config.localAddress,
-              trackerPort: config.localPort,
-              pares: file.pares,
-            };
-            sendUdpMessage(JSON.stringify(msg), {
-              address: msg.originIP,
-              port: msg.originPort,
-            }).then(() => {
-              console.log("Mensaje FOUND pasado al origen.");
-            });
-          } else {
-            sendUdpMessage(JSON.stringify(msg), {
-              address: msg.originIP,
-              port: msg.originPort,
-            }).then(() => {
-              console.log("Mensaje FOUND vacío pasado al origen.");
-            });
-          }
-        } else {
-          sendUdpMessage(JSON.stringify(msg), {
-            address: msg.originIP,
-            port: msg.originPort,
-          }).then(() => {
-            console.log("Mensaje FOUND vacío pasado al origen.");
-          });
-        }
+        searchFileInDHT(bucket, hash, msg);
       }
     }
+  }
+}
+
+function searchFileInDHT(bucket, hash, msg) {
+  if (files.has(bucket)) {
+    let matchingFiles = files.get(bucket);
+    let file = matchingFiles.find((possibleMatch) => {
+      return hash === possibleMatch.id;
+    });
+
+    msg.route += "/found";
+
+    if (file) {
+      // LO ENCONTRO, ENVIAR FOUND
+      msg.body = {
+        id: file.id,
+        trackerIP: config.localAddress,
+        trackerPort: config.localPort,
+        pares: file.pares,
+      };
+      sendUdpMessage(JSON.stringify(msg), {
+        address: msg.originIP,
+        port: msg.originPort,
+      }).then(() => {
+        console.log("Mensaje FOUND pasado al origen.");
+      });
+    } else {
+      sendUdpMessage(JSON.stringify(msg), {
+        address: msg.originIP,
+        port: msg.originPort,
+      }).then(() => {
+        console.log("Mensaje FOUND vacío pasado al origen.");
+      });
+    }
+  } else {
+    sendUdpMessage(JSON.stringify(msg), {
+      address: msg.originIP,
+      port: msg.originPort,
+    }).then(() => {
+      console.log("Mensaje FOUND vacío pasado al origen.");
+    });
   }
 }
 
@@ -551,6 +564,10 @@ setInterval(() => {
 
     files = new Map([...files, ...backupMap]);
     console.log("Backup de archivos reestablecido.");
+
+    if (config.leftTrackerId > config.trackerId) {
+      firstNodeBackup = true;
+    }
 
     // NODE MISSING
 
@@ -729,13 +746,19 @@ function receiveLeave(msg) {
       config.leftTrackerId = msg.body.newNodeId;
       config.leftTrackerAddress = msg.body.newNodeIp;
       config.leftTrackerPort = msg.body.newNodePort;
+
       console.log(
         "LEAVE recibido. Nueva configuración: " + JSON.stringify(config)
       );
+
       let backupMap = new Map(Object.entries(backupFiles));
 
       files = new Map([...files, ...backupMap]);
       console.log("Backup de archivos reestablecido.");
+
+      if (config.leftTrackerId > config.trackerId) {
+        firstNodeBackup = true;
+      }
     } else if (msg.body.trackerId === config.rightTrackerId) {
       config.rightTrackerId = msg.body.newNodeId;
       config.rightTrackerAddress = msg.body.newNodeIp;
@@ -866,7 +889,7 @@ function handleJoin(msg) {
         let h = Number.parseInt("0x" + config.trackerId);
         firstTrackerScore = Math.floor(h / 2);
       } else {
-        let keys = files.keys();
+        let keys = Array.from(files.keys());
         let min = keys[0];
         keys.slice(1).forEach((key) => {
           if (key < min) {
@@ -898,7 +921,7 @@ function handleJoin(msg) {
           Number.parseInt("0x" + config.leftTrackerId);
         score = Math.floor(h / 2);
       } else {
-        let keys = files.keys();
+        let keys = Array.from(files.keys());
         let min = keys[0];
         keys.slice(1).forEach((key) => {
           if (key < min) {
@@ -961,6 +984,51 @@ function joinConfig(msg) {
     console.log(
       "JOIN CONFIG realizado. Configuracion: " + JSON.stringify(config)
     );
+
+    if (firstNodeBackup) {
+      let backupFiles = {};
+      let keys = Array.from(files.keys());
+      if (config.leftTrackerId < config.trackerId) {
+        // NUEVO PRIMER NODO
+        keys.forEach((key) => {
+          if (key >= config.trackerId) {
+            files.delete(key);
+            backupFiles[key] = files.get(key);
+          }
+        });
+        firstNodeBackup = false;
+        console.log("El nodo deja de actuar como BACKUP.");
+      } else {
+        // NUEVO ULTIMO NODO
+        let firstNodeBackup = false;
+        keys.forEach((key) => {
+          if (key >= config.trackerId) {
+            if (key < config.leftTrackerId) {
+              files.delete(key);
+              backupFiles[key] = files.get(key);
+            } else {
+              firstNodeBackup = true;
+            }
+          }
+        });
+      }
+
+      let response = {
+        messageId: uuidv4(),
+        route: RESTORE_BACKUP_ROUTE,
+        body: {
+          files: backupFiles,
+          backup: !firstNodeBackup,
+        },
+      };
+
+      sendUdpMessage(JSON.stringify(msg), {
+        address: config.leftTrackerAddress,
+        port: config.leftTrackerPort,
+      }).then(() => {
+        console.log("Mensaje RESTORE BACKUP enviado a tracker izquierdo.");
+      });
+    }
   } else if (msg.body.rightNodeId) {
     config.rightTrackerId = msg.body.rightNodeId;
     config.rightTrackerAddress = msg.body.rightNodeAddress;
@@ -971,4 +1039,21 @@ function joinConfig(msg) {
   } else {
     console.log("JOIN CONFIG erroneo recibido.");
   }
+}
+
+function restoreBackup(msg) {
+  messages.push(msg.messageId);
+  setTimeout(() => {
+    if (messages.includes(msg.messageId)) {
+      let index = messages.indexOf(msg.messageId);
+      messages.splice(index, 1);
+    }
+  });
+
+  let backupMap = new Map(Object.entries(msg.body.backupFiles));
+
+  files = new Map([...files, ...backupMap]);
+  console.log("Backup desde el primer nodo restablecido.");
+
+  firstNodeBackup = msg.body.backup;
 }
