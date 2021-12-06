@@ -1,0 +1,11 @@
+{
+  "trackerId": "7f",
+  "localAddress": "127.0.0.1",
+  "localPort": 10001,
+  "leftTrackerId": "6f",
+  "leftTrackerAddress": "127.0.0.1",
+  "leftTrackerPort": 10000,
+  "rightTrackerId": "bf",
+  "rightTrackerAddress": "127.0.0.1",
+  "rightTrackerPort": 10002
+}

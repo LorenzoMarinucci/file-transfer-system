@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="shortcut icon" href="./img/icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Bit-Torrente</title>
+  </head>
+  <body>
+    <header>
+      <div id="logo">
+        <img class="logo-img" src="./img/logo.png" alt="" />
+      </div>
+    </header>
+    <main>
+      <div id="files">
+        <p id="title-list">Archivos disponibles para descargar</p>
+        <div id="update-button">
+          <button onclick="listFiles()">Actualizar lista</button>
+          <button onclick="Alert.render()" class="btn">Cargar archivo</button>
+        </div>
+        <div id="files-list"></div>
+      </div>
+      <div id="popUpOverlay"></div>
+      <div id="popUpBox">
+        <div id="box">
+          <i class="fas fa-check-circle fa-5x"></i>
+          <p id="upload-title">Carga de archivos</p>
+          <button id="close" type="button" onclick="closeUpload()">
+            Cerrar
+          </button>
+          <input type="file" id="file-input" style="display: none" />
+          <input
+            type="button"
+            value="Elegir archivo..."
+            onclick="document.getElementById('file-input').click();"
+          />
+          <div id="file-details">
+            <p id="file-name">Nombre del archivo:</p>
+            <p id="file-size">Tamaño:</p>
+          </div>
+          <div>
+            <div style="margin-bottom: 10px">
+              <p>IP:</p>
+              <input type="text" id="ip-input" />
+            </div>
+            <div style="margin-bottom: 10px">
+              <p>Puerto:</p>
+              <input type="text" id="port-input" />
+            </div>
+          </div>
+          <div id="closeModal"></div>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <div id="contact-info">
+        <h4>Made by</h4>
+        <div id="names">
+          <div>
+            <p>Lucía Palomeque</p>
+            <a href=""
+              ><img src="./img/github_logo.png" alt="" style="height: 20px"
+            /></a>
+            <a href=""
+              ><img src="./img/linkedin_logo.png" alt="" style="height: 20px"
+            /></a>
+          </div>
+          <div>
+            <p>Julián Viejo</p>
+            <a href=""
+              ><img src="./img/github_logo.png" alt="" style="height: 20px"
+            /></a>
+            <a href=""
+              ><img src="./img/linkedin_logo.png" alt="" style="height: 20px"
+            /></a>
+          </div>
+          <div>
+            <p>Lorenzo Marinucci</p>
+            <a href=""
+              ><img src="./img/github_logo.png" alt="" style="height: 20px"
+            /></a>
+            <a href=""
+              ><img src="./img/linkedin_logo.png" alt="" style="height: 20px"
+            /></a>
+          </div>
+        </div>
+        <h3>Facultad de Ingeniería, UNMDP - 2021 &COPY</h3>
+      </div>
+    </footer>
+    <script src="index.js"></script>
+  </body>
+</html>

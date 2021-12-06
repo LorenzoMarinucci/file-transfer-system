@@ -1,0 +1,200 @@
+* {
+  margin: 0px;
+  padding: 0px;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 62.5%;
+  font-family: "Montserrat", sans-serif;
+}
+
+header {
+  min-height: 15vh;
+  background-color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 0.5px black solid;
+}
+
+main {
+  min-height: 75vh;
+  display: flex;
+}
+
+/* FOOTER */
+
+footer {
+  border-top: 0.5px black solid;
+  min-height: 10vh;
+  background-color: black;
+  padding-top: 5px;
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  color: white;
+}
+
+#contact-info {
+  width: 50%;
+  margin: auto;
+}
+
+#contact-info h4 {
+  font-size: 1.4rem;
+  font-weight: bolder;
+  margin-bottom: 5px;
+}
+
+#names {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+#names div {
+  margin-right: 20px;
+  margin-left: 20px;
+}
+
+#logo {
+  background-color: white;
+  border-radius: 20px;
+  padding: 10px;
+}
+
+.logo-img {
+  height: 10vh;
+}
+
+#files {
+  background-color: rgb(125, 75, 155);
+  width: 100%;
+  min-height: 75vh;
+  font-size: medium;
+  text-align: center;
+  display: block;
+  list-style-type: none;
+}
+
+#files-list {
+  border-radius: 20px;
+  background-color: rgb(202, 158, 228);
+  width: 95%;
+  min-height: 62vh;
+  margin: 0 auto;
+}
+
+#files-list ul {
+  list-style-type: none;
+  overflow: hidden;
+  overflow-y: scroll;
+  width: 100%;
+  height: 62vh;
+}
+
+#files-list li {
+  border-radius: 20px;
+  box-shadow: 1px lightgray;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 5px;
+}
+
+a:link {
+  color: black;
+}
+
+a:hover {
+  background: white;
+}
+
+#files-list li:hover {
+  background-color: rgb(194, 172, 214);
+}
+
+#title-list {
+  text-align: center;
+  margin-top: 10px;
+  background-color: white;
+  display: inline-block;
+  padding: 5px;
+  border-radius: 5px;
+}
+
+#update-button {
+  margin: 10px;
+}
+
+#upload-title {
+  text-align: center;
+  margin: 5px;
+  font-size: medium;
+}
+
+#file-input::-webkit-file-upload-button {
+  visibility: hidden;
+}
+
+#file-input::before {
+  content: "Seleccione un archivo";
+  display: inline-block;
+  background: linear-gradient(top, #f9f9f9, #e3e3e3);
+  border: 1px solid #999;
+  border-radius: 3px;
+  padding: 5px 8px;
+  outline: none;
+  white-space: nowrap;
+  user-select: all;
+  -webkit-user-select: none;
+  cursor: pointer;
+  text-shadow: 1px 1px #fff;
+  font-weight: 700;
+  font-size: 10pt;
+}
+
+#file-input:hover::before {
+  border-color: black;
+}
+
+#file-input:active::before {
+  background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+}
+
+#close {
+  position: absolute;
+  right: 20px;
+  top: 10px;
+}
+
+/*https://css-tricks.com/snippets/css/custom-file-input-styling-webkitblink/*/
+
+.btn {
+  margin: 10px;
+}
+
+#popUpBox {
+  width: 500px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 0 10px black;
+  border-radius: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  padding: 10px;
+  text-align: center;
+  display: none;
+}
+
+/*https://dzone.com/articles/4-ways-to-create-a-modal-popup-box-with-html-css-a*/
+
+#file-details {
+  font-size: medium;
+  color: white;
+  margin: 10px;
+  background-color: black;
+}
