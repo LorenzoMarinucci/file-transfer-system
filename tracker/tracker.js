@@ -992,8 +992,8 @@ function joinConfig(msg) {
         // NUEVO PRIMER NODO
         keys.forEach((key) => {
           if (key >= config.trackerId) {
-            files.delete(key);
             backupFiles[key] = files.get(key);
+            files.delete(key);
           }
         });
         firstNodeBackup = false;
@@ -1004,8 +1004,8 @@ function joinConfig(msg) {
         keys.forEach((key) => {
           if (key >= config.trackerId) {
             if (key < config.leftTrackerId) {
-              files.delete(key);
               backupFiles[key] = files.get(key);
+              files.delete(key);
             } else {
               firstNodeBackup = true;
             }
@@ -1022,7 +1022,7 @@ function joinConfig(msg) {
         },
       };
 
-      sendUdpMessage(JSON.stringify(msg), {
+      sendUdpMessage(JSON.stringify(response), {
         address: config.leftTrackerAddress,
         port: config.leftTrackerPort,
       }).then(() => {
@@ -1050,7 +1050,7 @@ function restoreBackup(msg) {
     }
   });
 
-  let backupMap = new Map(Object.entries(msg.body.backupFiles));
+  let backupMap = new Map(Object.entries(msg.body.files));
 
   files = new Map([...files, ...backupMap]);
   console.log("Backup desde el primer nodo restablecido.");
