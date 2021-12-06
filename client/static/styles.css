@@ -198,3 +198,7 @@ a:hover {
   margin: 10px;
   background-color: black;
 }
+
+a:hover {
+  background: none;
+}
