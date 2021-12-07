@@ -21,11 +21,6 @@ function sendUdpMessage(msg, { address, port, hostname }) {
       resolve(msg);
     });
 
-    socketUDP.on("timeout", () => {
-      socketUDP.close();
-      reject("Socket timed out.");
-    });
-
     socketUDP.bind({ address: hostname });
 
     setTimeout(() => {

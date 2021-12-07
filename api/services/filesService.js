@@ -22,7 +22,7 @@ function getAllFiles() {
   };
 
   return new Promise((resolve, reject) => {
-    sendUdpMessage(msg, udpConfig, true)
+    sendUdpMessage(msg, udpConfig)
       .then((val) => {
         log.info("Succesful response from tracker.");
         let msg = JSON.parse(val.toString("utf-8"));
@@ -55,10 +55,16 @@ function saveFile(file) {
   };
 
   return new Promise((resolve, reject) => {
-    sendUdpMessage(msg, udpConfig, false)
+    sendUdpMessage(msg, udpConfig)
       .then((val) => {
-        log.info("File saved.");
-        resolve(val);
+        let r = JSON.parse(val.toString());
+        if(r.status){
+          log.info("File saved.");
+          resolve(val);
+        }else{
+          log.info("File not saved.");
+          reject(val);
+        }
       })
       .catch((err) => {
         log.error("Error while saving file.");
@@ -74,7 +80,7 @@ function requestFile(hash) {
     route,
   };
   return new Promise((resolve, reject) => {
-    sendUdpMessage(msg, udpConfig, true)
+    sendUdpMessage(msg, udpConfig)
       .then((val) => {
         let response = JSON.parse(val);
         if (response.body) {

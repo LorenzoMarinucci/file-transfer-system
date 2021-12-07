@@ -233,6 +233,17 @@ function store(msg) {
     console.log(
       "No puede almacenarse el archivo. No hay trackers que cubran el dominio requerido."
     );
+    let respuesta = {
+      messageId: msg.messageId,
+      route: msg.route,
+      status: false
+    };
+    sendUdpMessage(JSON.stringify(respuesta), {
+      address: msg.originIP,
+      port: msg.originPort,
+    }).then(() => {
+      console.log("Respuesta STORE pasada al origen (status: false).");
+    });
   } else {
     messages.push(msg.messageId);
     setTimeout(() => {
@@ -316,6 +327,17 @@ function store(msg) {
           files.set(hash, [file]);
         }
         console.log("ARCHIVO CON CLAVE " + hash + " ALMACENADO");
+        let respuesta = {
+          messageId: msg.messageId,
+          route: msg.route,
+          status: true
+        };
+        sendUdpMessage(JSON.stringify(respuesta), {
+          address: msg.originIP,
+          port: msg.originPort,
+        }).then(() => {
+          console.log("Respuesta STORE pasada al origen (status: true).");
+        });
         requestCount();
       }
     }
